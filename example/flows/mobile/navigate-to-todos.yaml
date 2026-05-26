@@ -1,0 +1,13 @@
+appId: com.example.todoapp
+---
+# Navigates to the todo list and asserts a specific item is visible.
+# The TODO_TITLE variable is injected by the step definition.
+# Maestro CLI equivalent:
+#   maestro test flows/mobile/navigate-to-todos.yaml --env TODO_TITLE="Buy groceries"
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "My Todos"
+- assertVisible:
+    text: "${TODO_TITLE}"
+- takeScreenshot: "${SCREENSHOT_NAME}"

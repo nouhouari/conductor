@@ -1,0 +1,10 @@
+appId: com.example.todoapp
+---
+# Launches the app with cleared state (empty todo list).
+# Maestro CLI equivalent:
+#   maestro test flows/mobile/launch-app-clean.yaml
+- launchApp:
+    clearState: true
+- assertVisible:
+    text: "No todos yet"
+- takeScreenshot: "empty-state"
