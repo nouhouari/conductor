@@ -1,0 +1,39 @@
+{
+  "name": "conductor",
+  "version": "0.1.0",
+  "description": "Multi-platform E2E test framework — web, API, mobile, database in one Cucumber scenario",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "cucumber-js",
+    "test:web": "cucumber-js --profile web",
+    "test:api": "cucumber-js --profile api",
+    "test:mobile": "cucumber-js --profile mobile",
+    "test:cross": "cucumber-js --tags @cross-platform",
+    "test:example": "cucumber-js --profile example",
+    "test:dry-run": "cucumber-js --dry-run",
+    "report": "allure generate allure-results --clean -o allure-report",
+    "report:open": "allure open allure-report"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "@cucumber/cucumber": "^11.0.0",
+    "allure-cucumberjs": "^3.0.0",
+    "allure-commandline": "^2.27.0",
+    "playwright": "^1.44.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  }
+}
