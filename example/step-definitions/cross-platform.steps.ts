@@ -1,5 +1,5 @@
 import { Then } from '@cucumber/cucumber';
-import { ConductorWorld } from '../../src/world/ConductorWorld';
+import { ConductorWorld } from 'conductor';
 
 Then('the Flutter app should display {string} in the todo list', async function (this: ConductorWorld, title: string) {
   const result = await this.maestro.runOrThrow('verify-todo', {

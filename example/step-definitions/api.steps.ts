@@ -1,5 +1,5 @@
 import { Then } from '@cucumber/cucumber';
-import { ConductorWorld } from '../../src/world/ConductorWorld';
+import { ConductorWorld } from 'conductor';
 
 Then('the API should return the todo {string} with status {string}', async function (this: ConductorWorld, title: string, status: string) {
   if (!this.api.isInitialized) await this.api.init(this.web.context);

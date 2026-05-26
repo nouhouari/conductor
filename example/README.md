@@ -1,61 +1,146 @@
-# Conductor Example Project
+# conductor-example
 
-This directory contains a working example that demonstrates how to use the Conductor framework to write multi-platform BDD tests with a single Cucumber scenario spanning web, API, and mobile.
+A standalone project that shows how to use the [Conductor](../README.md) test framework. It is intentionally structured like a real consumer project — it has its own `package.json`, `tsconfig.json`, and `cucumber.js`, and it imports from `conductor` as a package dependency.
 
-## What's Here
-
-### Pages (`pages/`)
-
-- **`LoginPage.ts`** — extends `BasePage`, provides `login(username, password)` using Playwright locators with `data-testid` selectors.
-- **`TodoPage.ts`** — extends `BasePage`, provides `createTodo(title)`, `assertVisible(title)`, and `getTodoCount()`.
-
-Both pages follow the Page Object Model pattern: the constructor accepts `(page: Page, config: EnvironmentConfig)` from the base class, making them easy to instantiate from any step definition.
-
-### Step Definitions (`step-definitions/`)
-
-- **`web.steps.ts`** — Given/When/Then steps that drive the browser via `ConductorWorld.page`. Uses `LoginPage` and `TodoPage`.
-- **`api.steps.ts`** — Then step that calls the REST API via `ConductorWorld.api`. Uses plain assertions (no external assertion library required).
-- **`cross-platform.steps.ts`** — Then step that invokes a Maestro flow via `ConductorWorld.maestro.runOrThrow(...)`, passing environment variables to the YAML flow.
-
-### Features (`features/`)
-
-- **`web/todo-crud.feature`** — `@web` tagged; exercises the browser-only path.
-- **`api/todo-api.feature`** — `@api` tagged; exercises the REST API path (no browser needed).
-- **`cross-platform/web-to-mobile-sync.feature`** — `@cross-platform` tagged; a single scenario that creates a todo on the web, verifies it via the API, then confirms it appears in the Flutter mobile app using Maestro.
-
-### Mobile Flows (`flows/mobile/`)
-
-- **`verify-todo.yaml`** — Maestro flow that launches the app, taps "My Todos", asserts the todo title is visible, and takes a screenshot. The `TODO_TITLE` variable is passed in from the step definition.
-
-## Running the Examples
+## Setup
 
 ```bash
-# Dry-run (no real browser/network/device needed)
+cd example
+npm install
+```
+
+`conductor` is listed as `"conductor": "file:.."` in `package.json`, so npm links it from the parent directory. No separate build step is needed during development — `ts-node` + `tsconfig-paths` resolve the `conductor` imports directly to the framework source.
+
+## Running tests
+
+```bash
+cd example
+
+# Dry-run — resolves all step definitions without a real browser or device
 npm run test:dry-run
 
-# Web scenarios only
+# Web scenarios only (requires a running web app)
 npm run test:web
 
-# API scenarios only
+# API scenarios only (requires a running API server)
 npm run test:api
 
-# All example scenarios (requires step definitions)
-npm run test:example
+# Mobile scenarios only (requires a connected device + Maestro installed)
+npm run test:mobile
 
-# Cross-platform (requires a running app + connected device with Maestro)
+# Cross-platform (web + API + Maestro)
 npm run test:cross
 ```
 
-## Environment Configuration
-
-Copy `.env.example` to `.env` and adjust the values:
+## Allure report
 
 ```bash
-cp .env.example .env
+npm run report        # generate HTML report from allure-results/
+npm run report:open   # open in browser
+```
+
+## Environment
+
+Copy the framework's `.env.example` and adjust:
+
+```bash
+cp ../.env.example .env
 ```
 
 Key variables:
-- `WEB_BASE_URL` — base URL of the web application under test
-- `API_BASE_URL` — base URL of the REST API
-- `HEADLESS` — set to `false` to watch the browser
-- `MAESTRO_DEVICE` — Maestro device ID for mobile testing
+
+| Variable | Description |
+|---|---|
+| `WEB_BASE_URL` | Base URL of the web app under test |
+| `API_BASE_URL` | Base URL of the REST API |
+| `HEADLESS` | `false` to watch the browser |
+| `MAESTRO_DEVICE` | Device ID for Maestro (`maestro devices` to list) |
+
+## Project structure
+
+```
+example/
+├── package.json                  # "conductor": "file:.." + own devDeps
+├── tsconfig.json                 # paths: { "conductor": ["../src/index.ts"] }
+├── cucumber.js                   # standalone runner config
+├── pages/
+│   ├── LoginPage.ts              # extends BasePage from conductor
+│   └── TodoPage.ts               # extends BasePage from conductor
+├── step-definitions/
+│   ├── web.steps.ts
+│   ├── api.steps.ts
+│   └── cross-platform.steps.ts
+├── features/
+│   ├── web/todo-crud.feature
+│   ├── api/todo-api.feature
+│   └── cross-platform/web-to-mobile-sync.feature
+└── flows/
+    └── mobile/verify-todo.yaml   # Maestro flow for Flutter
+```
+
+## How imports work
+
+All framework classes are imported from `conductor` — exactly as they would be in a real project after `npm install conductor`:
+
+```typescript
+import { BasePage, ConductorWorld } from 'conductor';
+```
+
+During development (with `"conductor": "file:.."`), `tsconfig-paths` maps the `conductor` module specifier to `../src/index.ts` so TypeScript and ts-node both resolve the framework source directly.
+
+The framework's lifecycle hooks are loaded via `cucumber.js`:
+
+```js
+require: [
+  'node_modules/conductor/src/hooks/index.ts',  // registers ConductorWorld + tag hooks
+  'step-definitions/**/*.ts'
+]
+```
+
+## What the example demonstrates
+
+### LoginPage and TodoPage — extending BasePage
+
+```typescript
+import { BasePage } from 'conductor';
+
+export class LoginPage extends BasePage {
+  async login(username: string, password: string) {
+    await this.navigate('/login');
+    await this.page.fill('[data-testid="username"]', username);
+    await this.page.fill('[data-testid="password"]', password);
+    await this.page.click('[data-testid="login-submit"]');
+    await this.waitForLoad();
+  }
+}
+```
+
+### Step definitions — using ConductorWorld
+
+```typescript
+import { When } from '@cucumber/cucumber';
+import { ConductorWorld } from 'conductor';
+import { LoginPage } from '../pages/LoginPage';
+
+When('I log in as {string} with password {string}', async function (this: ConductorWorld, username, password) {
+  const loginPage = new LoginPage(this.page, this.config);
+  await loginPage.login(username, password);
+});
+```
+
+### Cross-platform scenario
+
+```gherkin
+@cross-platform
+Feature: Todo created on web appears on Flutter mobile app
+
+  Scenario: Full platform sync
+    Given I am on the todo web application
+    When I log in as "user@example.com" with password "secret"
+    And I create a todo titled "Buy groceries"
+    Then the todo "Buy groceries" appears on the web dashboard
+    And the API should return the todo "Buy groceries" with status "open"
+    And the Flutter app should display "Buy groceries" in the todo list
+```
+
+The `@cross-platform` tag activates all three drivers — Playwright browser, Playwright APIRequestContext, and Maestro CLI — automatically via the framework's hooks.

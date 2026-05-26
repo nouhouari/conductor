@@ -1,5 +1,5 @@
 import { Given, When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from '../../src/world/ConductorWorld';
+import { ConductorWorld } from 'conductor';
 import { LoginPage } from '../pages/LoginPage';
 import { TodoPage } from '../pages/TodoPage';
 

@@ -1,4 +1,4 @@
-import { BasePage } from '../../src/pages/BasePage';
+import { BasePage } from 'conductor';
 import type { Locator } from 'playwright';
 
 export class LoginPage extends BasePage {
