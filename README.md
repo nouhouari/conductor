@@ -146,3 +146,184 @@ Before({ tags: '@database' }, async function (this: ConductorWorld) {
 ```
 
 See [`example/`](example/README.md) for a complete working demonstration.
+
+---
+
+## Flutter & Maestro Setup
+
+Conductor drives Flutter mobile apps via the [Maestro](https://maestro.mobile.dev) CLI. Maestro launches your app on a simulator or device and executes YAML flows — no app-side instrumentation required.
+
+### 1. Install Maestro
+
+```bash
+curl -fsSL "https://get.maestro.mobile.dev" | bash
+```
+
+Verify the installation:
+
+```bash
+maestro --version
+```
+
+Maestro requires **Java 11+** on the PATH. On macOS, install it with `brew install openjdk@17` if needed.
+
+### 2. Start a Flutter emulator / device
+
+**iOS Simulator (macOS only)**
+
+```bash
+open -a Simulator
+# or pick a specific device:
+xcrun simctl boot "iPhone 15"
+```
+
+**Android Emulator**
+
+```bash
+# list available AVDs
+emulator -list-avds
+# start one
+emulator -avd Pixel_7_API_34
+```
+
+**Physical device** — connect via USB and confirm it is visible:
+
+```bash
+flutter devices
+maestro devices   # Maestro's own device list
+```
+
+### 3. Build and install your Flutter app
+
+```bash
+# debug build for the target platform
+flutter build apk --debug          # Android
+flutter build ios --debug          # iOS (requires Xcode)
+
+# install on the connected device / emulator
+flutter install
+```
+
+The app must already be installed before Maestro can launch it.
+
+### 4. Configure the app ID
+
+Set `appId` in every Maestro flow YAML to your Flutter app's bundle/application ID:
+
+```yaml
+# example/flows/mobile/verify-todo.yaml
+appId: com.example.todoapp   # <-- match AndroidManifest.xml / Info.plist
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    text: "${TODO_TITLE}"
+- takeScreenshot: "verify-${TODO_TITLE}"
+```
+
+Find your app ID in:
+- **Android**: `android/app/build.gradle` → `applicationId`
+- **iOS**: `ios/Runner/Info.plist` → `CFBundleIdentifier`
+
+### 5. Configure Conductor
+
+Set mobile options in `.env` (or via environment config):
+
+```bash
+# .env
+MAESTRO_DEVICE=                   # leave blank to use the only connected device
+                                   # or set to a specific device ID from `maestro devices`
+```
+
+Or override in `config/environments/dev.ts`:
+
+```typescript
+import type { EnvironmentConfig } from '../types';
+
+export const devConfig: Partial<EnvironmentConfig> = {
+  mobile: {
+    deviceId: 'emulator-5554',    # Android emulator ID
+    flowsDir: 'example/flows/mobile',
+    timeoutMs: 90000,
+    maestroBin: '/usr/local/bin/maestro'  # explicit path if not on PATH
+  }
+};
+```
+
+### 6. Write a Maestro flow
+
+Flows live in `example/flows/mobile/` (or wherever `mobile.flowsDir` points). Variables passed from the step definition arrive via `${VAR_NAME}` interpolation:
+
+```yaml
+# example/flows/mobile/verify-todo.yaml
+appId: com.example.todoapp
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "My Todos"
+- assertVisible:
+    text: "${TODO_TITLE}"
+- takeScreenshot: "verify-${TODO_TITLE}"
+```
+
+Run a flow directly from the CLI to validate it before wiring it into a scenario:
+
+```bash
+maestro test example/flows/mobile/verify-todo.yaml --env TODO_TITLE="Buy groceries"
+```
+
+### 7. Call Maestro from a step definition
+
+`ConductorWorld.maestro` exposes `run()` and `runOrThrow()`. Pass env vars as a plain object:
+
+```typescript
+import { Then } from '@cucumber/cucumber';
+import { ConductorWorld } from '../../src/world/ConductorWorld';
+
+Then('the Flutter app should display {string} in the todo list', async function (this: ConductorWorld, title: string) {
+  await this.maestro.runOrThrow('verify-todo', {
+    env: { TODO_TITLE: title }
+  });
+});
+```
+
+`runOrThrow` throws (and fails the scenario) if Maestro exits non-zero or if its output contains `"Flow Failed"`.
+
+### 8. Tag scenarios with `@mobile` or `@cross-platform`
+
+```gherkin
+@cross-platform
+Scenario: Todo created on web appears on Flutter app
+  Given I am on the todo web application
+  When I create a todo titled "Buy groceries"
+  Then the Flutter app should display "Buy groceries" in the todo list
+```
+
+Then run:
+
+```bash
+npm run test:cross
+# or target mobile only:
+npm run test:mobile
+```
+
+### MaestroDriver API reference
+
+| Method | Description |
+|---|---|
+| `run(flowName, opts?)` | Run a flow; returns `{ success, output, exitCode }` — never throws |
+| `runOrThrow(flowName, opts?)` | Same as `run()` but throws on failure |
+
+`opts.env` — `Record<string, string>` passed as `--env K=V` flags  
+`opts.timeoutMs` — per-call override; defaults to `config.mobile.timeoutMs` (60 s)
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `maestro: command not found` | Add `~/.maestro/bin` to `PATH`, or set `mobile.maestroBin` in config |
+| `No devices found` | Start an emulator or connect a device; run `maestro devices` to confirm |
+| `Flow Failed: Element not found` | The app may not have finished loading — add a `- waitForAnimationToEnd` step before the assertion |
+| `Timeout exceeded` | Increase `mobile.timeoutMs` or `opts.timeoutMs`; check device is responsive |
+| App not launching | Verify `appId` matches exactly; rebuild and reinstall the app |
