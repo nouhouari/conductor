@@ -12,7 +12,7 @@
     "test:mobile": "cucumber-js --profile mobile",
     "test:cross": "cucumber-js --tags @cross-platform",
     "test:example": "cucumber-js --profile example",
-    "test:dry-run": "cucumber-js --dry-run",
+    "test:dry-run": "cucumber-js --profile example --dry-run",
     "report": "allure generate allure-results --clean -o allure-report",
     "report:open": "allure open allure-report"
   },
