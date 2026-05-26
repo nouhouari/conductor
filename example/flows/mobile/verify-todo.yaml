@@ -1,0 +1,9 @@
+appId: com.example.todoapp
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "My Todos"
+- assertVisible:
+    text: "${TODO_TITLE}"
+- takeScreenshot: "verify-${TODO_TITLE}"
