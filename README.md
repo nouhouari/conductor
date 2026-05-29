@@ -1,7 +1,7 @@
 # Conductor
 
 [![CI](https://github.com/nouhouari/conductor/actions/workflows/ci.yml/badge.svg)](https://github.com/nouhouari/conductor/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/conductor.svg)](https://www.npmjs.com/package/conductor)
+[![npm version](https://img.shields.io/npm/v/conductor-e2e.svg)](https://www.npmjs.com/package/conductor-e2e)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A multi-platform E2E test framework where **one Cucumber scenario** can drive a **web browser**, a **REST API**, a **Flutter mobile app**, a **JavaFX desktop app**, and a **database** — all from TypeScript.
@@ -32,7 +32,7 @@ Scenario: Todo created on web appears on the Flutter mobile app
 ## Quick Start
 
 ```bash
-npm install conductor
+npm install conductor-e2e
 ```
 
 See the [**User Guide**](docs/USER_GUIDE.md) for a step-by-step walkthrough of bootstrapping a new E2E project from scratch.

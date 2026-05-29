@@ -1,6 +1,6 @@
 # conductor-example
 
-A standalone project that shows how to use the [Conductor](../README.md) test framework. It is intentionally structured like a real consumer project — it has its own `package.json`, `tsconfig.json`, and `cucumber.js`, and it imports from `conductor` as a package dependency.
+A standalone project that shows how to use the [Conductor](../README.md) test framework. It is intentionally structured like a real consumer project — it has its own `package.json`, `tsconfig.json`, and `cucumber.js`, and it imports from `conductor-e2e` as a package dependency.
 
 ## Setup
 
@@ -9,7 +9,7 @@ cd example
 npm install
 ```
 
-`conductor` is listed as `"conductor": "file:.."` in `package.json`, so npm links it from the parent directory. No separate build step is needed during development — `ts-node` + `tsconfig-paths` resolve the `conductor` imports directly to the framework source.
+`conductor-e2e` is listed as `"conductor-e2e": "file:.."` in `package.json`, so npm links it from the parent directory. No separate build step is needed during development — `ts-node` + `tsconfig-paths` resolve the `conductor-e2e` imports directly to the framework source.
 
 ## Running tests
 
@@ -60,12 +60,12 @@ Key variables:
 
 ```
 example/
-├── package.json                  # "conductor": "file:.." + own devDeps
-├── tsconfig.json                 # paths: { "conductor": ["../src/index.ts"] }
+├── package.json                  # "conductor-e2e": "file:.." + own devDeps
+├── tsconfig.json                 # paths: { "conductor-e2e": ["../src/index.ts"] }
 ├── cucumber.js                   # standalone runner config
 ├── pages/
-│   ├── LoginPage.ts              # extends BasePage from conductor
-│   └── TodoPage.ts               # extends BasePage from conductor
+│   ├── LoginPage.ts              # extends BasePage from conductor-e2e
+│   └── TodoPage.ts               # extends BasePage from conductor-e2e
 ├── step-definitions/
 │   ├── web.steps.ts
 │   ├── api.steps.ts
@@ -80,19 +80,19 @@ example/
 
 ## How imports work
 
-All framework classes are imported from `conductor` — exactly as they would be in a real project after `npm install conductor`:
+All framework classes are imported from `conductor-e2e` — exactly as they would be in a real project after `npm install conductor-e2e`:
 
 ```typescript
-import { BasePage, ConductorWorld } from 'conductor';
+import { BasePage, ConductorWorld } from 'conductor-e2e';
 ```
 
-During development (with `"conductor": "file:.."`), `tsconfig-paths` maps the `conductor` module specifier to `../src/index.ts` so TypeScript and ts-node both resolve the framework source directly.
+During development (with `"conductor-e2e": "file:.."`), `tsconfig-paths` maps the `conductor-e2e` module specifier to `../src/index.ts` so TypeScript and ts-node both resolve the framework source directly.
 
 The framework's lifecycle hooks are loaded via `cucumber.js`:
 
 ```js
 require: [
-  'node_modules/conductor/src/hooks/index.ts',  // registers ConductorWorld + tag hooks
+  'node_modules/conductor-e2e/src/hooks/index.ts',  // registers ConductorWorld + tag hooks
   'step-definitions/**/*.ts'
 ]
 ```
@@ -102,7 +102,7 @@ require: [
 ### LoginPage and TodoPage — extending BasePage
 
 ```typescript
-import { BasePage } from 'conductor';
+import { BasePage } from 'conductor-e2e';
 
 export class LoginPage extends BasePage {
   async login(username: string, password: string) {
@@ -119,7 +119,7 @@ export class LoginPage extends BasePage {
 
 ```typescript
 import { When } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 import { LoginPage } from '../pages/LoginPage';
 
 When('I log in as {string} with password {string}', async function (this: ConductorWorld, username, password) {

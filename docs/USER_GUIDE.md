@@ -45,7 +45,7 @@ Conductor itself only requires Node ≥ 18. The other tools are needed only if y
 ```bash
 mkdir my-e2e && cd my-e2e
 npm init -y
-npm install conductor @cucumber/cucumber ts-node tsconfig-paths typescript @types/node
+npm install conductor-e2e @cucumber/cucumber ts-node tsconfig-paths typescript @types/node
 npm install --save-dev allure-cucumberjs allure-commandline
 npx playwright install chromium
 ```
@@ -75,7 +75,7 @@ const path = require('path');
 
 // Loading framework hooks by direct path ensures we share the same
 // @cucumber/cucumber instance as the runner — required for World hooks.
-const conductorHooks = require.resolve('conductor/dist/src/hooks/index');
+const conductorHooks = require.resolve('conductor-e2e/dist/src/hooks/index');
 
 module.exports = {
   default: {
@@ -137,7 +137,7 @@ The `example/` directory in the conductor repo is a working reference of this ex
 Conductor ships a default config (`http://localhost:3000`, Playwright Chromium headless). To customize, create `conductor.config.ts` and override:
 
 ```typescript
-import type { EnvironmentConfig } from 'conductor';
+import type { EnvironmentConfig } from 'conductor-e2e';
 
 export const config: Partial<EnvironmentConfig> = {
   web: {
@@ -215,7 +215,7 @@ Feature: User login
 `pages/LoginPage.ts`:
 
 ```typescript
-import { BasePage } from 'conductor';
+import { BasePage } from 'conductor-e2e';
 import type { Locator } from 'playwright';
 
 export class LoginPage extends BasePage {
@@ -244,7 +244,7 @@ export class LoginPage extends BasePage {
 
 ```typescript
 import { Given, When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 import { LoginPage } from '../pages/LoginPage';
 
 Given('I am on the login page', async function (this: ConductorWorld) {
@@ -278,7 +278,7 @@ For pure API tests, no browser is needed. The `ApiDriver` wraps Playwright's `AP
 
 ```typescript
 import { When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 
 When('I create a todo {string} via the API',
   async function (this: ConductorWorld, title: string) {
@@ -340,7 +340,7 @@ appId: com.example.myapp
 
 ```typescript
 import { When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 
 const MOBILE_TIMEOUT = { timeout: 120000 };
 
@@ -403,7 +403,7 @@ saveBtn.setId("dialog-save");
 
 ```typescript
 import { Given, When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 import * as path from 'path';
 
 const DESKTOP_TIMEOUT = { timeout: 60000 };
@@ -434,7 +434,7 @@ Tag with `@desktop` — the after-hook will close the JavaFX process automatical
 `DatabaseDriver` is an **abstract class**, not bundled with a default driver. Implement one for your DB:
 
 ```typescript
-import { DatabaseDriver, QueryResult } from 'conductor';
+import { DatabaseDriver, QueryResult } from 'conductor-e2e';
 import { Pool } from 'pg';
 
 export class PostgresDriver extends DatabaseDriver {
@@ -456,7 +456,7 @@ Register it in a `Before` hook (typically scoped to `@database`):
 
 ```typescript
 import { Before } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 import { PostgresDriver } from './PostgresDriver';
 
 Before({ tags: '@database' }, async function (this: ConductorWorld) {

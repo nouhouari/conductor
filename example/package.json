@@ -16,7 +16,7 @@
   "dependencies": {
     "@cucumber/cucumber": "^11.0.0",
     "allure-cucumberjs": "^3.0.0",
-    "conductor": "file:..",
+    "conductor-e2e": "file:..",
     "javafx-driver": "^0.2.2",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",

@@ -1,5 +1,5 @@
 import { Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -76,7 +76,7 @@ Hooks are registered via `src/hooks/index.ts`, which also calls `setWorldConstru
 
 ### Workspace Layout
 
-Root is the framework library (`src/`, `config/`). `example/` is an npm workspace that consumes the framework via `"conductor": "file:.."`. The example has its own `cucumber.js` with profiles (default, web, api, mobile) and resolves `conductor` imports to source via `tsconfig-paths`.
+Root is the framework library (`src/`, `config/`). `example/` is an npm workspace that consumes the framework via `"conductor-e2e": "file:.."`. The example has its own `cucumber.js` with profiles (default, web, api, mobile) and resolves `conductor-e2e` imports to source via `tsconfig-paths`.
 
 ### Key Convention
 

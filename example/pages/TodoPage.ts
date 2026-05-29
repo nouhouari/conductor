@@ -1,4 +1,4 @@
-import { BasePage } from 'conductor';
+import { BasePage } from 'conductor-e2e';
 import type { Locator } from 'playwright';
 
 export class TodoPage extends BasePage {

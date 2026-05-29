@@ -1,5 +1,5 @@
 import { Given, When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor';
+import { ConductorWorld } from 'conductor-e2e';
 
 const LAUNCH_TIMEOUT = { timeout: 150000 };
 const STEP_TIMEOUT = { timeout: 150000 };

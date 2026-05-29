@@ -69,7 +69,7 @@ chore: bump playwright to 1.50
 
 Please include:
 
-- Conductor version (`npm ls conductor`)
+- Conductor version (`npm ls conductor-e2e`)
 - Node version (`node --version`)
 - Minimal reproduction (a single feature file + step definition is ideal)
 - Full Cucumber output with `--format progress`
