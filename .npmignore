@@ -1,0 +1,41 @@
+# Source — only ship compiled dist/
+src/
+test/
+example/
+apps/
+docs/
+
+# Build artifacts (other than dist/)
+allure-results/
+allure-report/
+reports/
+build/
+node_modules/
+.dart_tool/
+.gradle/
+
+# Test data
+*.png
+*.log
+.env
+.env.example
+docker-compose.yml
+
+# Dev tooling
+.github/
+.vscode/
+.idea/
+.claude/
+.actrc
+.act*
+*.lock
+package-lock.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc dev files
+CLAUDE.md
+cucumber.js
+tsconfig.json

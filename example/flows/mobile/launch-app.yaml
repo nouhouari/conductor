@@ -1,10 +1,9 @@
 appId: com.example.todoapp
 ---
-# Launches the app and asserts the home screen heading is visible.
-# Maestro CLI equivalent:
-#   maestro test flows/mobile/launch-app.yaml
 - launchApp:
     clearState: false
-- assertVisible:
-    text: "My Todos"
+- extendedWaitUntil:
+    visible:
+      text: "My Todos"
+    timeout: 30000
 - takeScreenshot: "home-screen"

@@ -1,0 +1,16 @@
+appId: com.example.todoapp
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "add-todo-fab"
+- assertVisible: "New Todo"
+- tapOn:
+    id: "dialog-title-input"
+- setClipboard: "${TODO_TITLE}"
+- pasteText
+- hideKeyboard
+- tapOn:
+    id: "dialog-save"
+- assertVisible: "${TODO_TITLE}"
+- takeScreenshot: "create-${TODO_TITLE}"

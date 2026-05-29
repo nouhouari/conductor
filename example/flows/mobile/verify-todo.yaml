@@ -2,8 +2,10 @@ appId: com.example.todoapp
 ---
 - launchApp:
     clearState: false
-- tapOn:
-    text: "My Todos"
-- assertVisible:
-    text: "${TODO_TITLE}"
+- extendedWaitUntil:
+    visible: "My Todos"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "${TODO_TITLE}"
+    timeout: 30000
 - takeScreenshot: "verify-${TODO_TITLE}"

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (root + workspaces)
+        run: npm ci
+
+      - name: Type-check & build
+        run: npm run build
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Dry-run example scenarios
+        working-directory: example
+        run: |
+          npx cucumber-js --dry-run \
+            --require-module ts-node/register \
+            --require-module tsconfig-paths/register \
+            --require '../src/hooks/index.ts' \
+            --require 'step-definitions/**/*.ts' \
+            --format summary \
+            features/api/todo-api.feature \
+            features/web/todo-crud.feature \
+            features/desktop/todo-desktop.feature \
+            features/cross-platform/web-to-mobile-sync.feature

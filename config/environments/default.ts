@@ -13,10 +13,15 @@ export const defaultConfig: EnvironmentConfig = {
     timeoutMs: 30000
   },
   mobile: {
-    flowsDir: 'example/flows/mobile',
-    timeoutMs: 60000
+    flowsDir: 'flows/mobile',
+    timeoutMs: 120000
   },
   database: {
     enabled: false
+  },
+  desktop: {
+    agentJar: require('path').resolve(__dirname, '../../apps/desktop/agent/fxagent.jar'),
+    defaultTimeoutMs: 10000,
+    screenshotDir: 'reports/screenshots'
   }
 };

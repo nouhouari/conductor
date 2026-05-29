@@ -1,0 +1,10 @@
+appId: com.example.todoapp
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "${TODO_TITLE}"
+    timeout: 30000
+- tapOn: "Toggle ${TODO_TITLE}"
+- waitForAnimationToEnd
+- takeScreenshot: "toggle-${TODO_TITLE}"

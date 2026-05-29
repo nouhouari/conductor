@@ -1,0 +1,23 @@
+appId: com.example.todoapp
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "${OLD_TITLE}"
+    timeout: 30000
+- tapOn:
+    text: "Edit ${OLD_TITLE}"
+- assertVisible: "Edit Todo"
+- tapOn:
+    id: "dialog-title-input"
+- repeat:
+    times: 30
+    commands:
+      - pressKey: backspace
+- setClipboard: "${NEW_TITLE}"
+- pasteText
+- hideKeyboard
+- tapOn:
+    id: "dialog-save"
+- assertVisible: "${NEW_TITLE}"
+- takeScreenshot: "edit-${NEW_TITLE}"

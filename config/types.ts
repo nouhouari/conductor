@@ -23,10 +23,22 @@ export interface DatabaseConfig {
   enabled: boolean;
 }
 
+export interface DesktopConfig {
+  agentJar: string;
+  javaBin?: string;
+  agentPort?: number;
+  agentHost?: string;
+  defaultTimeoutMs?: number;
+  pollIntervalMs?: number;
+  screenshotDir?: string;
+  jvmArgs?: string[];
+}
+
 export interface EnvironmentConfig {
   name: string;
   web: WebConfig;
   api: ApiConfig;
   mobile: MobileConfig;
   database: DatabaseConfig;
+  desktop?: DesktopConfig;
 }

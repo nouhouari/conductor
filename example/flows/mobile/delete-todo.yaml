@@ -1,0 +1,14 @@
+appId: com.example.todoapp
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "${TODO_TITLE}"
+    timeout: 30000
+- tapOn: "Delete ${TODO_TITLE}"
+- waitForAnimationToEnd
+- assertVisible: "Delete Todo"
+- tapOn:
+    id: "dialog-confirm-delete"
+- waitForAnimationToEnd
+- takeScreenshot: "delete-${TODO_TITLE}"

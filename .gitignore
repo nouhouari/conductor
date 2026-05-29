@@ -1,7 +1,52 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+build/
+
+# Test reports & artifacts
 reports/
 allure-results/
 allure-report/
+
+# Test run screenshots (Maestro/Playwright captures that end up at the cwd)
+example/*.png
+
+# Local environment
 .env
 *.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Claude Code local state
+.claude/
+**/.claude/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+**/ios/Flutter/.last_build_id
+
+# Android / Gradle
+.gradle/
+local.properties
+**/android/captures/
+**/android/.gradle/
+**/android/app/release/
+
+# IDE compilation output
+bin/
+out/
+*.class
+
+# JavaFX agent JAR (downloaded artifact, not source — see docs/USER_GUIDE.md)
+apps/desktop/agent/fxagent.jar

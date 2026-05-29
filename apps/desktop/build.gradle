@@ -1,0 +1,42 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'com.gradleup.shadow' version '8.3.5'
+}
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = '21.0.2'
+    modules = ['javafx.controls', 'javafx.swing']
+}
+
+dependencies {
+    implementation 'org.json:json:20240303'
+    implementation "org.openjfx:javafx-controls:21.0.2:mac"
+    implementation "org.openjfx:javafx-graphics:21.0.2:mac"
+    implementation "org.openjfx:javafx-base:21.0.2:mac"
+    implementation "org.openjfx:javafx-swing:21.0.2:mac"
+}
+
+application {
+    mainClass = 'com.example.todoapp.Launcher'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+run {
+    systemProperties System.getProperties()
+    jvmArgs = ['--add-opens', 'java.base/java.lang=ALL-UNNAMED']
+}
+
+shadowJar {
+    archiveClassifier = 'all'
+    mergeServiceFiles()
+}

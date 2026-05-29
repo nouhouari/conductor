@@ -1,12 +1,45 @@
 {
   "name": "conductor",
   "version": "0.1.0",
-  "description": "Multi-platform E2E test framework — web, API, mobile, database in one Cucumber scenario",
-  "workspaces": ["example"],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "Multi-platform E2E test framework — web (Playwright), API, mobile (Maestro), desktop (JavaFX), and database in one Cucumber scenario",
+  "keywords": [
+    "e2e",
+    "testing",
+    "cucumber",
+    "bdd",
+    "playwright",
+    "maestro",
+    "flutter",
+    "javafx",
+    "multi-platform",
+    "test-framework"
+  ],
+  "author": "Nourreddine Houari",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nouhouari/conductor.git"
+  },
+  "homepage": "https://github.com/nouhouari/conductor#readme",
+  "bugs": {
+    "url": "https://github.com/nouhouari/conductor/issues"
+  },
+  "workspaces": [
+    "example"
+  ],
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "config",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
     "test": "cucumber-js",
     "test:dry-run": "cucumber-js --dry-run",
     "report": "allure generate allure-results --clean -o allure-report",
@@ -14,22 +47,26 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/src/index.js",
+      "require": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     }
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@cucumber/cucumber": "^11.0.0",
-    "allure-cucumberjs": "^3.0.0",
     "allure-commandline": "^2.27.0",
-    "playwright": "^1.44.0",
+    "allure-cucumberjs": "^3.0.0",
+    "javafx-driver": "^0.2.2",
     "pino": "^9.0.0",
-    "pino-pretty": "^11.0.0"
+    "pino-pretty": "^11.0.0",
+    "playwright": "^1.44.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
     "ts-node": "^10.9.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.4.0"
   }
 }

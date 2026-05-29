@@ -1,0 +1,14 @@
+{
+  "name": "conductor-test-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal todo web app + API for Conductor E2E tests",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "pg": "^8.13.0"
+  }
+}

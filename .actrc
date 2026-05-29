@@ -1,0 +1,8 @@
+# Use medium-size Ubuntu image (~700MB) which has node/npm preinstalled
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+--container-architecture linux/amd64
+
+# Don't mount docker socket — our jobs don't need docker-in-docker
+# (and Rancher Desktop's socket can't be bind-mounted into act containers)
+--container-daemon-socket -

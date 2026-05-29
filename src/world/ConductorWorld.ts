@@ -6,6 +6,7 @@ import { WebDriver } from '../drivers/WebDriver';
 import { ApiDriver } from '../drivers/ApiDriver';
 import { MaestroDriver } from '../drivers/MaestroDriver';
 import { DatabaseDriver } from '../drivers/DatabaseDriver';
+import { JavaFxDriver } from 'javafx-driver';
 import { createLogger } from '../support/logger';
 
 export class ConductorWorld extends World {
@@ -17,6 +18,7 @@ export class ConductorWorld extends World {
   private _apiDriver: ApiDriver | null = null;
   private _maestroDriver: MaestroDriver | null = null;
   private _dbDriver: DatabaseDriver | null = null;
+  private _fxDriver: JavaFxDriver | null = null;
 
   constructor(options: IWorldOptions) {
     super(options);
@@ -49,6 +51,27 @@ export class ConductorWorld extends World {
   get maestro(): MaestroDriver {
     if (!this._maestroDriver) this._maestroDriver = new MaestroDriver(this.config);
     return this._maestroDriver;
+  }
+
+  // Desktop (JavaFX)
+
+  get fx(): JavaFxDriver {
+    if (!this._fxDriver) {
+      if (!this.config.desktop) {
+        throw new Error('No desktop config. Set config.desktop with DesktopConfig.');
+      }
+      this._fxDriver = new JavaFxDriver(this.config.desktop);
+    }
+    return this._fxDriver;
+  }
+
+  get isFxLaunched(): boolean {
+    return this._fxDriver?.isLaunched ?? false;
+  }
+
+  async closeFx(): Promise<void> {
+    await this._fxDriver?.close();
+    this._fxDriver = null;
   }
 
   // Database (plugin — user registers their adapter)
