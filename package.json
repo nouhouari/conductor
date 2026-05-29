@@ -1,6 +1,6 @@
 {
   "name": "conductor-e2e",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Multi-platform E2E test framework — web (Playwright), API, mobile (Maestro), desktop (JavaFX), and database in one Cucumber scenario",
   "keywords": [
     "e2e",
@@ -25,7 +25,8 @@
     "url": "https://github.com/nouhouari/conductor/issues"
   },
   "workspaces": [
-    "example"
+    "example",
+    "mcp"
   ],
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -59,6 +60,7 @@
     "@cucumber/cucumber": "^11.0.0",
     "allure-commandline": "^2.27.0",
     "allure-cucumberjs": "^3.0.0",
+    "dotenv": "^16.4.5",
     "javafx-driver": "^0.2.2",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",

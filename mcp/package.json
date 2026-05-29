@@ -1,0 +1,61 @@
+{
+  "name": "conductor-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for AI-assisted E2E test authoring with the Conductor framework",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "conductor",
+    "e2e",
+    "testing",
+    "cucumber",
+    "playwright",
+    "maestro"
+  ],
+  "author": "Nourreddine Houari",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nouhouari/conductor.git",
+    "directory": "mcp"
+  },
+  "main": "dist/cli.js",
+  "bin": {
+    "conductor-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "npm run test:smoke",
+    "test:smoke": "node --test --test-reporter=spec --experimental-strip-types tests/smoke.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "js-yaml": "^4.1.0",
+    "typescript": "^5.4.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.25.0"
+  },
+  "peerDependencies": {
+    "conductor-e2e": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "conductor-e2e": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

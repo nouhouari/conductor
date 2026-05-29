@@ -20,7 +20,7 @@ async function ensureApi(world: ConductorWorld): Promise<void> {
 
 Given('a todo {string} exists via the API', async function (this: ConductorWorld, title: string) {
   await ensureApi(this);
-  const response = await this.api.post(`${this.config.api.baseUrl}/todos`, { title, status: 'open' });
+  const response = await this.api.post(`${this.config.api.baseUrl}/api/todos`, { title, status: 'open' });
   if (!response.ok()) throw new Error(`Failed to create todo: ${response.status()} ${response.statusText()}`);
   const todo = await response.json() as TodoResponse;
   this.data.lastTodoId = todo.id;
@@ -29,7 +29,7 @@ Given('a todo {string} exists via the API', async function (this: ConductorWorld
 
 Given('a todo {string} with priority {string} exists via the API', async function (this: ConductorWorld, title: string, priority: string) {
   await ensureApi(this);
-  const response = await this.api.post(`${this.config.api.baseUrl}/todos`, { title, status: 'open', priority });
+  const response = await this.api.post(`${this.config.api.baseUrl}/api/todos`, { title, status: 'open', priority });
   if (!response.ok()) throw new Error(`Failed to create todo: ${response.status()} ${response.statusText()}`);
   const todo = await response.json() as TodoResponse;
   this.data.lastTodoId = todo.id;
@@ -38,7 +38,7 @@ Given('a todo {string} with priority {string} exists via the API', async functio
 
 When('I create a todo {string} via the API', async function (this: ConductorWorld, title: string) {
   await ensureApi(this);
-  const response = await this.api.post(`${this.config.api.baseUrl}/todos`, { title, status: 'open' });
+  const response = await this.api.post(`${this.config.api.baseUrl}/api/todos`, { title, status: 'open' });
   if (!response.ok()) throw new Error(`Failed to create todo: ${response.status()} ${response.statusText()}`);
   const todo = await response.json() as TodoResponse;
   this.data.lastTodoId = todo.id;
@@ -47,7 +47,7 @@ When('I create a todo {string} via the API', async function (this: ConductorWorl
 
 When('I create a todo {string} with priority {string} via the API', async function (this: ConductorWorld, title: string, priority: string) {
   await ensureApi(this);
-  const response = await this.api.post(`${this.config.api.baseUrl}/todos`, { title, status: 'open', priority });
+  const response = await this.api.post(`${this.config.api.baseUrl}/api/todos`, { title, status: 'open', priority });
   if (!response.ok()) throw new Error(`Failed to create todo: ${response.status()} ${response.statusText()}`);
   const todo = await response.json() as TodoResponse;
   this.data.lastTodoId = todo.id;
@@ -56,10 +56,10 @@ When('I create a todo {string} with priority {string} via the API', async functi
 
 When('I update the todo {string} title to {string} via the API', async function (this: ConductorWorld, currentTitle: string, newTitle: string) {
   await ensureApi(this);
-  const todos = await (await this.api.get(`${this.config.api.baseUrl}/todos`)).json() as TodoResponse[];
+  const todos = await (await this.api.get(`${this.config.api.baseUrl}/api/todos`)).json() as TodoResponse[];
   const todo = todos.find(t => t.title === currentTitle);
   if (!todo) throw new Error(`Todo "${currentTitle}" not found`);
-  const response = await this.api.put(`${this.config.api.baseUrl}/todos/${todo.id}`, { title: newTitle });
+  const response = await this.api.put(`${this.config.api.baseUrl}/api/todos/${todo.id}`, { title: newTitle });
   if (!response.ok()) throw new Error(`Failed to update todo: ${response.status()} ${response.statusText()}`);
   this.data.lastTodoId = todo.id;
   this.data.lastTodoTitle = newTitle;
@@ -67,34 +67,34 @@ When('I update the todo {string} title to {string} via the API', async function 
 
 When('I update the todo {string} status to {string} via the API', async function (this: ConductorWorld, title: string, status: string) {
   await ensureApi(this);
-  const todos = await (await this.api.get(`${this.config.api.baseUrl}/todos`)).json() as TodoResponse[];
+  const todos = await (await this.api.get(`${this.config.api.baseUrl}/api/todos`)).json() as TodoResponse[];
   const todo = todos.find(t => t.title === title);
   if (!todo) throw new Error(`Todo "${title}" not found`);
-  const response = await this.api.put(`${this.config.api.baseUrl}/todos/${todo.id}`, { status });
+  const response = await this.api.put(`${this.config.api.baseUrl}/api/todos/${todo.id}`, { status });
   if (!response.ok()) throw new Error(`Failed to update todo: ${response.status()} ${response.statusText()}`);
 });
 
 When('I update the todo {string} priority to {string} via the API', async function (this: ConductorWorld, title: string, priority: string) {
   await ensureApi(this);
-  const todos = await (await this.api.get(`${this.config.api.baseUrl}/todos`)).json() as TodoResponse[];
+  const todos = await (await this.api.get(`${this.config.api.baseUrl}/api/todos`)).json() as TodoResponse[];
   const todo = todos.find(t => t.title === title);
   if (!todo) throw new Error(`Todo "${title}" not found`);
-  const response = await this.api.put(`${this.config.api.baseUrl}/todos/${todo.id}`, { priority });
+  const response = await this.api.put(`${this.config.api.baseUrl}/api/todos/${todo.id}`, { priority });
   if (!response.ok()) throw new Error(`Failed to update todo: ${response.status()} ${response.statusText()}`);
 });
 
 When('I delete the todo {string} via the API', async function (this: ConductorWorld, title: string) {
   await ensureApi(this);
-  const todos = await (await this.api.get(`${this.config.api.baseUrl}/todos`)).json() as TodoResponse[];
+  const todos = await (await this.api.get(`${this.config.api.baseUrl}/api/todos`)).json() as TodoResponse[];
   const todo = todos.find(t => t.title === title);
   if (!todo) throw new Error(`Todo "${title}" not found`);
-  const response = await this.api.delete(`${this.config.api.baseUrl}/todos/${todo.id}`);
+  const response = await this.api.delete(`${this.config.api.baseUrl}/api/todos/${todo.id}`);
   if (response.status() !== 204) throw new Error(`Failed to delete todo: ${response.status()} ${response.statusText()}`);
 });
 
 Then('the API should return the todo {string} with status {string}', async function (this: ConductorWorld, title: string, status: string) {
   await ensureApi(this);
-  const response = await this.api.get(`${this.config.api.baseUrl}/todos`);
+  const response = await this.api.get(`${this.config.api.baseUrl}/api/todos`);
   if (!response.ok()) throw new Error(`API returned ${response.status()}: ${response.statusText()}`);
   const todos = await response.json() as TodoResponse[];
   const found = todos.find((t) => t.title === title);
@@ -104,7 +104,7 @@ Then('the API should return the todo {string} with status {string}', async funct
 
 Then('the API should return the todo {string} with priority {string}', async function (this: ConductorWorld, title: string, priority: string) {
   await ensureApi(this);
-  const response = await this.api.get(`${this.config.api.baseUrl}/todos`);
+  const response = await this.api.get(`${this.config.api.baseUrl}/api/todos`);
   if (!response.ok()) throw new Error(`API returned ${response.status()}: ${response.statusText()}`);
   const todos = await response.json() as TodoResponse[];
   const found = todos.find((t) => t.title === title);
@@ -114,7 +114,7 @@ Then('the API should return the todo {string} with priority {string}', async fun
 
 Then('the API should not return a todo {string}', async function (this: ConductorWorld, title: string) {
   await ensureApi(this);
-  const response = await this.api.get(`${this.config.api.baseUrl}/todos`);
+  const response = await this.api.get(`${this.config.api.baseUrl}/api/todos`);
   if (!response.ok()) throw new Error(`API returned ${response.status()}: ${response.statusText()}`);
   const todos = await response.json() as TodoResponse[];
   const found = todos.find((t) => t.title === title);
@@ -123,7 +123,7 @@ Then('the API should not return a todo {string}', async function (this: Conducto
 
 Then('the API should return {int} todo(s)', async function (this: ConductorWorld, count: number) {
   await ensureApi(this);
-  const response = await this.api.get(`${this.config.api.baseUrl}/todos`);
+  const response = await this.api.get(`${this.config.api.baseUrl}/api/todos`);
   if (!response.ok()) throw new Error(`API returned ${response.status()}: ${response.statusText()}`);
   const todos = await response.json() as TodoResponse[];
   if (todos.length !== count) throw new Error(`Expected ${count} todos but got ${todos.length}`);

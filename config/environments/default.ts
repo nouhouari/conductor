@@ -8,7 +8,7 @@ export const defaultConfig: EnvironmentConfig = {
     browserName: 'chromium'
   },
   api: {
-    baseUrl: 'http://localhost:3000/api',
+    baseUrl: 'http://localhost:3000',
     defaultCredentials: { username: 'test@example.com', password: 'password' },
     timeoutMs: 30000
   },

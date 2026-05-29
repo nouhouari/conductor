@@ -17,7 +17,7 @@ async function ensureApi(world: ConductorWorld): Promise<void> {
 
 async function findTodoIdByTitle(world: ConductorWorld, title: string): Promise<number> {
   await ensureApi(world);
-  const response = await world.api.get(`${world.config.api.baseUrl}/todos`);
+  const response = await world.api.get(`${world.config.api.baseUrl}/api/todos`);
   const todos = await response.json() as TodoResponse[];
   const todo = todos.find(t => t.title === title);
   if (!todo) throw new Error(`Todo "${title}" not found via API`);

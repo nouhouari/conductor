@@ -1,0 +1,65 @@
+name: Release conductor-mcp
+
+# Triggers on tags of the form mcp-v<semver>, e.g. mcp-v0.1.0.
+# The companion release.yml handles v* tags for conductor-e2e.
+on:
+  push:
+    tags:
+      - 'mcp-v*'
+
+jobs:
+  release-mcp:
+    name: Build, GitHub Release & npm publish (conductor-mcp)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create GitHub Release + upload asset
+      id-token: write   # npm provenance signing via OIDC
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies (root + workspaces)
+        run: npm ci
+
+      - name: Type-check (conductor-mcp)
+        run: npm run typecheck -w mcp
+
+      - name: Build (conductor-mcp)
+        run: npm run build -w mcp
+
+      # Verify the pushed tag version matches mcp/package.json version.
+      # e.g. tag mcp-v0.1.0 must match "version": "0.1.0" in mcp/package.json.
+      - name: Verify version matches tag
+        run: |
+          PKG_VERSION=$(node -p "require('./mcp/package.json').version")
+          TAG_VERSION="${GITHUB_REF#refs/tags/mcp-v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag mcp-v$TAG_VERSION does not match mcp/package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Pack tarball
+        run: npm pack -w mcp
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            conductor-mcp-*.tgz
+
+      - name: Publish to npm
+        # Run npm publish from inside mcp/ so npm picks up mcp/package.json
+        # rather than the root package.json.  --provenance attaches a signed
+        # SLSA provenance attestation; requires id-token: write above.
+        working-directory: mcp
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

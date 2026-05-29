@@ -1,7 +1,8 @@
 # Conductor
 
 [![CI](https://github.com/nouhouari/conductor/actions/workflows/ci.yml/badge.svg)](https://github.com/nouhouari/conductor/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/conductor-e2e.svg)](https://www.npmjs.com/package/conductor-e2e)
+[![npm version](https://img.shields.io/npm/v/conductor-e2e.svg?label=conductor-e2e)](https://www.npmjs.com/package/conductor-e2e)
+[![npm version](https://img.shields.io/npm/v/conductor-mcp.svg?label=conductor-mcp)](https://www.npmjs.com/package/conductor-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A multi-platform E2E test framework where **one Cucumber scenario** can drive a **web browser**, a **REST API**, a **Flutter mobile app**, a **JavaFX desktop app**, and a **database** — all from TypeScript.
@@ -109,6 +110,7 @@ For mobile and desktop, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 ## Documentation
 
 - [**User Guide**](docs/USER_GUIDE.md) — bootstrap a new E2E project, write scenarios, run tests
+- [**conductor-mcp**](mcp/README.md) — AI-assisted test authoring for Claude Code, Cursor, Continue
 - [**Architecture**](CLAUDE.md) — framework internals (driver lifecycle, hooks, config)
 - [Example project README](example/README.md) — guided tour of the working example
 

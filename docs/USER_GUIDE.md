@@ -11,16 +11,17 @@ This guide walks you through creating an **E2E test project from scratch** using
 3. [Project layout](#3-project-layout)
 4. [Configure environments](#4-configure-environments)
 5. [Hooks: how scenario tags wire up drivers](#5-hooks-how-scenario-tags-wire-up-drivers)
-6. [Write your first web feature](#6-write-your-first-web-feature)
-7. [Add API scenarios](#7-add-api-scenarios)
-8. [Add mobile scenarios (Flutter + Maestro)](#8-add-mobile-scenarios-flutter--maestro)
-9. [Add desktop scenarios (JavaFX)](#9-add-desktop-scenarios-javafx)
-10. [Bring your own database](#10-bring-your-own-database)
-11. [Cross-platform scenarios](#11-cross-platform-scenarios)
-12. [Running tests](#12-running-tests)
-13. [Allure reporting](#13-allure-reporting)
-14. [CI/CD](#14-cicd)
-15. [Troubleshooting](#15-troubleshooting)
+6. [Writing tests with AI assistance](#6-writing-tests-with-ai-assistance)
+7. [Write your first web feature](#7-write-your-first-web-feature)
+8. [Add API scenarios](#8-add-api-scenarios)
+9. [Add mobile scenarios (Flutter + Maestro)](#9-add-mobile-scenarios-flutter--maestro)
+10. [Add desktop scenarios (JavaFX)](#10-add-desktop-scenarios-javafx)
+11. [Bring your own database](#11-bring-your-own-database)
+12. [Cross-platform scenarios](#12-cross-platform-scenarios)
+13. [Running tests](#13-running-tests)
+14. [Allure reporting](#14-allure-reporting)
+15. [CI/CD](#15-cicd)
+16. [Troubleshooting](#16-troubleshooting)
 
 ---
 
@@ -57,16 +58,20 @@ Create `tsconfig.json`:
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
+    "lib": ["ES2022", "DOM"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": "."
   },
   "include": ["./**/*.ts"],
   "exclude": ["node_modules"]
 }
 ```
+
+`DOM` in `lib` is required for `Storage` / `localStorage` / `Window` types reached through `page.evaluate(...)` in web step definitions.
 
 Create `cucumber.js`:
 
@@ -198,7 +203,67 @@ this.db     // ← throws unless you registered an adapter
 
 ---
 
-## 6. Write your first web feature
+## 6. Writing tests with AI assistance
+
+If you use Claude Code, Cursor, or Continue, **conductor-mcp** gives these AI assistants a structured tool surface to bootstrap projects and write tests using Conductor idioms instead of guessing.
+
+### Setup
+
+Add to `.mcp.json` in your project root (or create it):
+
+```json
+{
+  "mcpServers": {
+    "conductor": {
+      "command": "npx",
+      "args": ["-y", "conductor-mcp"]
+    }
+  }
+}
+```
+
+Restart your editor. The Conductor MCP tools are now available in the AI chat.
+
+### Flow A: Bootstrap from scratch
+
+**You type:**
+> "Set up an E2E test project for web + API using Conductor."
+
+**The AI:**
+1. Calls `init_project` with your chosen platforms.
+2. Tells you to `cd` into the new directory, run `npm install`, and restart the MCP server.
+
+**You get:**
+- A ready-to-run project with working feature files, step definitions, and page objects.
+- A green dry-run (all scaffolded steps are registered).
+- The MCP server now has access to discovery tools in your new project.
+
+### Flow B: Add a test to your existing project
+
+**You type:**
+> "Add an E2E test for user password reset via the web."
+
+**The AI:**
+1. Uses `list_steps` to see what steps already exist (avoids duplication).
+2. Uses `list_page_objects` to find relevant page objects you can reuse.
+3. Calls `scaffold_feature` to create `features/web/password-reset.feature`.
+4. Calls `scaffold_step_def` to add any missing steps to your step definitions file.
+5. Calls `dry_run_scenario` to validate the new test resolves (no undefined steps).
+
+**You get:**
+- A new feature file with idiomatic Gherkin and the correct platform tag.
+- Step definitions following Conductor conventions.
+- Validation that everything wires together before you run the browser.
+
+### Important notes
+
+- The MCP server does **not** run `npm install` or restart your editor. These are your actions after `init_project`.
+- After `init_project`, the server's `ProjectContext` is cached. Restart the MCP server (restart your editor) so it picks up the new `cucumber.js` and can resolve the project.
+- For the full tool reference and more details, see [mcp/README.md](../mcp/README.md).
+
+---
+
+## 7. Write your first web feature
 
 `features/web/login.feature`:
 
@@ -272,7 +337,7 @@ Cucumber picks up `cucumber.js` automatically. The `@web` hook launches the brow
 
 ---
 
-## 7. Add API scenarios
+## 8. Add API scenarios
 
 For pure API tests, no browser is needed. The `ApiDriver` wraps Playwright's `APIRequestContext`:
 
@@ -312,7 +377,7 @@ if (!this.api.isInitialized) await this.api.init(this.web.context);
 
 ---
 
-## 8. Add mobile scenarios (Flutter + Maestro)
+## 9. Add mobile scenarios (Flutter + Maestro)
 
 ### Setup
 
@@ -370,7 +435,7 @@ MAESTRO_DEVICE=emulator-5554 ANDROID_HOME=$HOME/Library/Android/sdk \
 
 ---
 
-## 9. Add desktop scenarios (JavaFX)
+## 10. Add desktop scenarios (JavaFX)
 
 Conductor uses [`javafx-driver`](https://www.npmjs.com/package/javafx-driver) which spawns your JavaFX app with an agent JAR (`fxagent.jar`) attached. The agent exposes the JavaFX scene graph over a local HTTP port.
 
@@ -429,7 +494,7 @@ Tag with `@desktop` — the after-hook will close the JavaFX process automatical
 
 ---
 
-## 10. Bring your own database
+## 11. Bring your own database
 
 `DatabaseDriver` is an **abstract class**, not bundled with a default driver. Implement one for your DB:
 
@@ -468,7 +533,7 @@ Now `this.db.query(...)` works in any scenario tagged `@database` (and `@cross-p
 
 ---
 
-## 11. Cross-platform scenarios
+## 12. Cross-platform scenarios
 
 Tag with `@cross-platform` to activate **all** drivers. A typical sync test:
 
@@ -486,7 +551,7 @@ Each `Then` step uses a different driver — they share the **same `ConductorWor
 
 ---
 
-## 12. Running tests
+## 13. Running tests
 
 ```bash
 # All scenarios
@@ -517,7 +582,7 @@ DEBUG_MAESTRO=0 npx cucumber-js --tags @mobile  # silence Maestro output
 
 ---
 
-## 13. Allure reporting
+## 14. Allure reporting
 
 Conductor's example is preconfigured with `allure-cucumberjs/reporter`. Cucumber writes JSON + Allure source files into `allure-results/`. Generate the HTML report:
 
@@ -543,7 +608,7 @@ await this.attach(screenshot, 'image/png');
 
 ---
 
-## 14. CI/CD
+## 15. CI/CD
 
 A minimal GitHub Actions workflow that runs the non-mobile suites on every push:
 
@@ -581,7 +646,7 @@ Mobile tests need either a self-hosted runner with an Android emulator, or [Maes
 
 ---
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 ### Cucumber says "0 scenarios"
 

@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import { defaultConfig } from './environments/default';
 import type { EnvironmentConfig } from './types';
 

@@ -23,10 +23,12 @@ jobs:
       - name: Install dependencies (root + workspaces)
         run: npm ci
 
-      - name: Type-check & build
+      # ── conductor-e2e (framework) ─────────────────────────────────────────
+
+      - name: Type-check & build (conductor-e2e)
         run: npm run build
 
-      - name: Verify package contents
+      - name: Verify package contents (conductor-e2e)
         run: npm pack --dry-run
 
       - name: Dry-run example scenarios
@@ -42,3 +44,56 @@ jobs:
             features/web/todo-crud.feature \
             features/desktop/todo-desktop.feature \
             features/cross-platform/web-to-mobile-sync.feature
+
+      # ── conductor-mcp ────────────────────────────────────────────────────
+
+      - name: Type-check (conductor-mcp)
+        # tsc --noEmit is memory-intensive due to @modelcontextprotocol/sdk generics
+        # (8167-line types.d.ts with deep conditional type instantiation).
+        # 6 GB sits comfortably within GitHub's hosted runner limit (7 GB).
+        # NOTE: act local runners (Rancher Desktop) top out at ~3.8 GB total VM
+        # memory, so this step will OOM in act — that is an act infrastructure
+        # constraint, not a workflow bug.  On GitHub's hosted runners it passes.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run typecheck -w mcp
+
+      - name: Build (conductor-mcp)
+        run: npm run build -w mcp
+
+      - name: Verify package contents (conductor-mcp)
+        run: npm pack --dry-run -w mcp
+
+      - name: Smoke test (conductor-mcp)
+        run: cd mcp && npm run test:smoke
+
+      # ── drift check ──────────────────────────────────────────────────────
+      # Verifies that the hooks path resolution used by init_project's cucumber.js
+      # template still works.  The template resolves conductor-e2e's main entry
+      # and derives the hooks path via .replace() — if the framework ever renames
+      # or moves dist/src/hooks/index.js this step will fail loudly.
+
+      - name: Drift check — conductor-e2e hooks path
+        run: |
+          node - <<'EOF'
+          const path = require('path');
+          let conductorMain;
+          try {
+            conductorMain = require.resolve('conductor-e2e');
+          } catch (e) {
+            // In CI the package is not published yet; resolve from the local build
+            // artefact (dist/ is present after the build step above).
+            conductorMain = require.resolve('./dist/src/index.js');
+          }
+          const hooksPath = conductorMain.replace(
+            /[/\\]dist[/\\]src[/\\]index\.js$/,
+            path.sep + path.join('dist', 'src', 'hooks', 'index.js')
+          );
+          const fs = require('fs');
+          if (!fs.existsSync(hooksPath)) {
+            console.error('hooks path does not exist:', hooksPath);
+            console.error('conductor-e2e main was:', conductorMain);
+            process.exit(1);
+          }
+          console.log('hooks resolved:', hooksPath);
+          EOF

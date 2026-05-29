@@ -21,7 +21,7 @@ Then('the todo list shows {string}', async function (this: ConductorWorld, text:
 
 Given('a todo {string} exists in the system', async function (this: ConductorWorld, title: string) {
   if (!this.api.isInitialized) await this.api.init();
-  const response = await this.api.post(`${this.config.api.baseUrl}/todos`, { title, status: 'open' });
+  const response = await this.api.post(`${this.config.api.baseUrl}/api/todos`, { title, status: 'open' });
   if (!response.ok()) throw new Error(`Failed to seed todo: ${response.status()} ${response.statusText()}`);
   this.data.lastTodoTitle = title;
 });
