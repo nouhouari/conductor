@@ -258,7 +258,9 @@ function renderStepFunction(step: StepInput): string {
   const separator = paramList ? ', ' : '';
   const body = step.body?.trim() ?? '// TODO: implement step';
 
-  return `${step.type}('${step.pattern}', async function (this: ConductorWorld${separator}${paramList}) {
+  // JSON.stringify wraps the pattern in a properly-escaped JS string literal —
+  // handles single quotes in patterns like "I don't see {string}" without breaking.
+  return `${step.type}(${JSON.stringify(step.pattern)}, async function (this: ConductorWorld${separator}${paramList}) {
   ${body}
 });`;
 }

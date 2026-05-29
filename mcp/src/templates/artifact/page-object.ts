@@ -59,7 +59,10 @@ export function renderPageObjectTemplate(
     .join('\n');
 
   const locatorInitializations = locators
-    .map((l) => `    this.${l.name} = this.page.locator('${l.selector}');`)
+    // JSON.stringify produces a properly-quoted, fully-escaped JS string literal —
+    // handles single quotes inside the selector (e.g. role=textbox[name='Title']),
+    // backslashes, newlines, etc. without breaking the surrounding source.
+    .map((l) => `    this.${l.name} = this.page.locator(${JSON.stringify(l.selector)});`)
     .join('\n');
 
   const methodBodies = methods

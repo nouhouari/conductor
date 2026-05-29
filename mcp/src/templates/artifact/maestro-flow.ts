@@ -45,7 +45,9 @@ export function renderMaestroFlowTemplate(
       if (entries.length === 0) return '- # empty step';
       const [command, value] = entries[0];
       if (typeof value === 'string') {
-        return `- ${command}: "${value}"`;
+        // JSON.stringify yields a YAML-compatible double-quoted flow scalar with
+        // proper escaping for quotes, backslashes, newlines, and control chars.
+        return `- ${command}: ${JSON.stringify(value)}`;
       }
       if (value === null || value === undefined) {
         return `- ${command}`;
