@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [conductor-mcp 0.1.1] — 2026-05-29
+
+### Fixed
+
+- **conductor-mcp**: Quote handling in `scaffold_page_object`, `scaffold_step_def`, and `scaffold_maestro_flow`. Locator selectors like `role=textbox[name='Title']`, step patterns containing apostrophes (`I don't see {string}`), and Maestro values containing `"` were dropped verbatim into single-quoted JS literals or YAML scalars, producing broken source. All three sites now use `JSON.stringify`, which selects the quote style and escapes special characters. Fixes #1.
+
 ### Added
 
 - **conductor-mcp@0.1.0** — Model Context Protocol (stdio) server for AI-assisted E2E test authoring. Exposes 12 tools across discovery (list steps, page objects, flows, features), scaffolding (bootstrap new projects, create features/steps/pages/flows), and validation (dry-run scenarios). Lets Claude Code, Cursor, and Continue users bootstrap a Conductor project or add tests without leaving their editor. Versioned independently on `mcp-v*` tag prefix.
