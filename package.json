@@ -43,6 +43,7 @@
     "prepublishOnly": "npm run clean && npm run build",
     "test": "cucumber-js",
     "test:dry-run": "cucumber-js --dry-run",
+    "flutter:build:macos": "cd apps/mobile && flutter build macos --profile -t lib/main_test.dart --dart-define=API_BASE_URL=http://localhost:3000/api --dart-define=DISABLE_SWIPE_GESTURES=true",
     "report": "allure generate allure-results --clean -o allure-report",
     "report:open": "allure open allure-report"
   },

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:todoapp/driver_actions.dart';
 import 'package:todoapp/models/todo.dart';
 import 'package:todoapp/services/todo_service.dart';
 
 const _disableAnimations = bool.fromEnvironment('DISABLE_ANIMATIONS', defaultValue: false);
+// Disables Dismissible swipe gestures so flutter_driver can tap list buttons
+// without gesture-arena contention on desktop.
+const _disableSwipeGestures = bool.fromEnvironment('DISABLE_SWIPE_GESTURES', defaultValue: false);
 
 Color _priorityColor(String priority) {
   switch (priority) {
@@ -33,11 +37,103 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Todo> _todos = [];
   bool _loading = true;
   String? _error;
+  // Holds the active dialog's TextEditingController so that the
+  // 'setDialogText' requestData action can inject text without needing
+  // flutter_driver's TestTextInput mock (whose _client stays null on macOS
+  // because autofocus establishes the connection before the mock registers).
+  TextEditingController? _activeDialogController;
 
   @override
   void initState() {
     super.initState();
     _loadTodos();
+    if (_disableSwipeGestures) _registerDriverActions();
+  }
+
+  void _registerDriverActions() {
+    driverActions['toggleTodo'] = (args) async {
+      final title = args['title'] as String;
+      final todo = _todos.firstWhere(
+        (t) => t.title == title,
+        orElse: () => throw StateError('Todo "$title" not found'),
+      );
+      await _toggleTodo(todo);
+      return 'ok';
+    };
+
+    driverActions['editTodoTitle'] = (args) async {
+      final currentTitle = args['currentTitle'] as String;
+      final newTitle = (args['newTitle'] as String).trim();
+      if (newTitle.isEmpty || newTitle == currentTitle) return 'skipped';
+      final todo = _todos.firstWhere(
+        (t) => t.title == currentTitle,
+        orElse: () => throw StateError('Todo "$currentTitle" not found'),
+      );
+      final updated = await _service.updateTodo(todo.id, title: newTitle);
+      if (mounted) {
+        setState(() {
+          final idx = _todos.indexWhere((t) => t.id == todo.id);
+          if (idx != -1) _todos[idx] = updated;
+        });
+      }
+      return 'ok';
+    };
+
+    driverActions['deleteTodo'] = (args) async {
+      final title = args['title'] as String;
+      final todo = _todos.firstWhere(
+        (t) => t.title == title,
+        orElse: () => throw StateError('Todo "$title" not found'),
+      );
+      await _service.deleteTodo(todo.id);
+      if (mounted) {
+        setState(() => _todos.removeWhere((t) => t.id == todo.id));
+      }
+      return 'ok';
+    };
+
+    // Directly sets text on the currently-open dialog's TextEditingController.
+    // Avoids the TestTextInput mock path where _client is null on macOS because
+    // autofocus establishes the connection before the mock is registered.
+    driverActions['setDialogText'] = (args) async {
+      final text = args['text'] as String;
+      if (_activeDialogController == null) {
+        return 'error: no active dialog controller';
+      }
+      _activeDialogController!.text = text;
+      return 'ok';
+    };
+
+    // Directly calls _loadTodos() and waits for it to complete.
+    // Avoids relying on the Refresh IconButton tap which may not fire onPressed
+    // via flutter_driver touch events on macOS desktop.
+    driverActions['refresh'] = (args) async {
+      await _loadTodos();
+      if (_error != null) return 'error: load failed: $_error';
+      return 'ok';
+    };
+
+    // Polls until _loading is false. Useful after a tap-based refresh to
+    // ensure _todos is fully populated before acting on it.
+    driverActions['waitUntilLoaded'] = (args) async {
+      while (_loading) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      return 'ok';
+    };
+  }
+
+  @override
+  void dispose() {
+    if (_disableSwipeGestures) {
+      driverActions.remove('toggleTodo');
+      driverActions.remove('editTodoTitle');
+      driverActions.remove('deleteTodo');
+      driverActions.remove('setDialogText');
+      driverActions.remove('refresh');
+      driverActions.remove('waitUntilLoaded');
+    }
+    super.dispose();
   }
 
   Future<void> _loadTodos() async {
@@ -151,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<({String title, String priority})?> _showAddDialog() {
     final titleController = TextEditingController();
+    _activeDialogController = titleController;
     String selectedPriority = 'not urgent';
     return showDialog<({String title, String priority})>(
       context: context,
@@ -163,6 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Semantics(
                 identifier: 'dialog-title-input',
                 child: TextField(
+                  key: const ValueKey('dialog-title-input'),
                   controller: titleController,
                   autofocus: false,
                   showCursor: !_disableAnimations,
@@ -203,6 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () {
                     final title = titleController.text.trim();
                     if (title.isEmpty) return;
+                    _activeDialogController = null;
                     Navigator.pop(ctx, (title: title, priority: selectedPriority));
                   },
                   child: const Text('Save')),
@@ -215,6 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<String?> _showTitleDialog(String heading, String initial) {
     final controller = TextEditingController(text: initial);
+    _activeDialogController = controller;
     return showDialog<String>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -223,6 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Semantics(
             identifier: 'dialog-title-input',
             child: TextField(
+              key: const ValueKey('dialog-title-input'),
               controller: controller,
               autofocus: false,
               showCursor: !_disableAnimations,
@@ -285,6 +386,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('My Todos'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          if (_disableSwipeGestures)
+            IconButton(
+              key: const ValueKey('add-todo-fab'),
+              icon: const Icon(Icons.add),
+              onPressed: _addTodo,
+              tooltip: 'Add Todo',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadTodos,
@@ -306,12 +414,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   : RefreshIndicator(
                       onRefresh: _loadTodos,
                       child: ListView.builder(
+                        // NeverScrollableScrollPhysics prevents the scroll recognizer
+                        // from entering the gesture arena and blocking IconButton taps
+                        // when flutter_driver sends touch events on macOS desktop.
+                        physics: _disableSwipeGestures
+                            ? const NeverScrollableScrollPhysics()
+                            : null,
                         itemCount: _todos.length,
                         itemBuilder: (context, index) {
                           final todo = _todos[index];
                           return Dismissible(
                             key: ValueKey(todo.id),
-                            direction: DismissDirection.endToStart,
+                            direction: _disableSwipeGestures
+                                ? DismissDirection.none
+                                : DismissDirection.endToStart,
                             background: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
@@ -327,6 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: _priorityColor(todo.priority),
                               child: ListTile(
                                 leading: IconButton(
+                                  key: ValueKey('toggle-${todo.title}'),
                                   tooltip: 'Toggle ${todo.title}',
                                   icon: Icon(
                                     todo.isDone
@@ -358,11 +475,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
+                                      key: ValueKey('edit-${todo.title}'),
                                       tooltip: 'Edit ${todo.title}',
                                       icon: const Icon(Icons.edit, size: 20),
                                       onPressed: () => _editTodo(todo),
                                     ),
                                     IconButton(
+                                      key: ValueKey('delete-${todo.title}'),
                                       tooltip: 'Delete ${todo.title}',
                                       icon: const Icon(Icons.delete,
                                           size: 20, color: Colors.red),
@@ -376,9 +495,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ),
-      floatingActionButton: Semantics(
+      // In test mode, the "Add Todo" action is exposed as an AppBar IconButton
+      // (same pattern as Refresh). The FAB is hidden to avoid duplicate keys.
+      floatingActionButton: _disableSwipeGestures ? null : Semantics(
         identifier: 'add-todo-fab',
         child: FloatingActionButton(
+          key: const ValueKey('add-todo-fab'),
           onPressed: _addTodo,
           tooltip: 'Add Todo',
           child: const Icon(Icons.add),

@@ -34,5 +34,10 @@ module.exports = {
     ...common,
     paths: ['features/**/*.feature'],
     tags: '@mobile'
+  },
+  flutterDesktop: {
+    ...common,
+    paths: ['features/flutter-desktop/**/*.feature'],
+    tags: '@flutter-desktop'
   }
 };

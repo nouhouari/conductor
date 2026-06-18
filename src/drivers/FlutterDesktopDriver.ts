@@ -117,18 +117,35 @@ export class FlutterDesktopDriver {
 
   /** Tap a widget identified by `finder`. */
   async tap(finder: Finder, timeoutMs?: number): Promise<void> {
-    await this.driverCommand({ command: 'tap', ...this.serializeFinder(finder) }, timeoutMs);
+    const t = timeoutMs ?? this.cfg.defaultTimeoutMs ?? 10_000;
+    await this.driverCommand({ command: 'tap', ...this.serializeFinder(finder), timeout: String(t) }, t + 2000);
   }
 
   /** Type `text` into the currently focused text field.
-   *  Internally taps `finder` first to focus it. */
+   *  Emulation must be enabled BEFORE tapping so that `TextInput.setClient`
+   *  is captured by the mock — otherwise the mock's _client stays null and
+   *  enter_text is silently ignored. */
   async enterText(finder: Finder, text: string, timeoutMs?: number): Promise<void> {
-    await this.tap(finder, timeoutMs);
     if (!this.textEntryEmulationEnabled) {
       await this.driverCommand({ command: 'set_text_entry_emulation', enabled: 'true' }, timeoutMs);
       this.textEntryEmulationEnabled = true;
     }
+    await this.tap(finder, timeoutMs);
     await this.driverCommand({ command: 'enter_text', text }, timeoutMs);
+  }
+
+  /**
+   * Send a message to the app's `enableFlutterDriverExtension` data handler
+   * and return the response string.  Use this to invoke app-side actions that
+   * cannot be driven through the gesture system (e.g. tapping widgets inside
+   * a scrollable that blocks flutter_driver's hitTestable() check).
+   */
+  async requestData(message: string, timeoutMs?: number): Promise<string> {
+    const result = await this.driverCommand(
+      { command: 'request_data', message },
+      timeoutMs
+    ) as { message?: string };
+    return result.message ?? '';
   }
 
   /** Read the text of a Text widget at `finder`. */
@@ -146,6 +163,15 @@ export class FlutterDesktopDriver {
     await this.driverCommand(
       { command: 'waitFor', ...this.serializeFinder(finder), timeout: String(t) },
       t + 2000 // give the wire timeout some headroom over the driver timeout
+    );
+  }
+
+  /** Wait until `finder` no longer resolves to any widget. */
+  async waitForAbsent(finder: Finder, timeoutMs?: number): Promise<void> {
+    const t = timeoutMs ?? this.cfg.defaultTimeoutMs ?? 10_000;
+    await this.driverCommand(
+      { command: 'waitForAbsent', ...this.serializeFinder(finder), timeout: String(t) },
+      t + 2000
     );
   }
 

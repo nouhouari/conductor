@@ -27,7 +27,7 @@ export const defaultConfig: EnvironmentConfig = {
   flutterDesktop: {
     appPath: require('path').resolve(
       __dirname,
-      '../../apps/mobile/build/macos/Build/Products/Debug/todoapp.app/Contents/MacOS/todoapp'
+      '../../apps/mobile/build/macos/Build/Products/Profile/todoapp.app/Contents/MacOS/todoapp'
     ),
     defaultTimeoutMs: 10000,
     launchTimeoutMs: 30000,

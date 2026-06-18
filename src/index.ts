@@ -14,6 +14,9 @@ export type { JavaFxConfig, JavaFxLaunchOptions } from 'javafx-driver';
 export { DatabaseDriver } from './drivers/DatabaseDriver';
 export type { QueryResult } from './drivers/DatabaseDriver';
 
+export { FlutterDesktopDriver } from './drivers/FlutterDesktopDriver';
+export type { Finder, FinderType } from './drivers/FlutterDesktopDriver';
+
 export { BasePage } from './pages/BasePage';
 
 export { createLogger } from './support/logger';
@@ -21,4 +24,4 @@ export { retry } from './support/retry';
 export type { RetryOptions } from './support/retry';
 
 export { config, loadConfig } from '../config';
-export type { EnvironmentConfig, WebConfig, ApiConfig, MobileConfig, DatabaseConfig, DesktopConfig } from '../config/types';
+export type { EnvironmentConfig, WebConfig, ApiConfig, MobileConfig, DatabaseConfig, DesktopConfig, FlutterDesktopConfig } from '../config/types';

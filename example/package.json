@@ -8,6 +8,7 @@
     "test:web": "cucumber-js --profile web",
     "test:api": "cucumber-js --profile api",
     "test:mobile": "cucumber-js --profile mobile",
+    "test:flutter-desktop": "cucumber-js --profile flutterDesktop",
     "test:cross": "cucumber-js --tags @cross-platform",
     "test:dry-run": "cucumber-js --dry-run",
     "report": "allure generate allure-results --clean -o allure-report",
@@ -23,6 +24,7 @@
     "playwright": "^1.44.0"
   },
   "devDependencies": {
+    "@cucumber/messages": "^33.0.2",
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
