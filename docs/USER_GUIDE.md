@@ -1,6 +1,6 @@
 # Conductor — User Guide
 
-This guide walks you through creating an **E2E test project from scratch** using Conductor. By the end, you'll have a project that drives a web app, a REST API, and (optionally) a Flutter mobile app and a JavaFX desktop app from one Cucumber scenario.
+This guide walks you through creating an **E2E test project from scratch** using Conductor. By the end, you'll have a project that drives a web app, a REST API, a Flutter mobile app, a Flutter desktop app (macOS), and a JavaFX desktop app from one Cucumber scenario.
 
 ---
 
@@ -15,13 +15,14 @@ This guide walks you through creating an **E2E test project from scratch** using
 7. [Write your first web feature](#7-write-your-first-web-feature)
 8. [Add API scenarios](#8-add-api-scenarios)
 9. [Add mobile scenarios (Flutter + Maestro)](#9-add-mobile-scenarios-flutter--maestro)
-10. [Add desktop scenarios (JavaFX)](#10-add-desktop-scenarios-javafx)
-11. [Bring your own database](#11-bring-your-own-database)
-12. [Cross-platform scenarios](#12-cross-platform-scenarios)
-13. [Running tests](#13-running-tests)
-14. [Allure reporting](#14-allure-reporting)
-15. [CI/CD](#15-cicd)
-16. [Troubleshooting](#16-troubleshooting)
+10. [Add Flutter Desktop scenarios (macOS)](#10-add-flutter-desktop-scenarios-macos)
+11. [Add desktop scenarios (JavaFX)](#11-add-desktop-scenarios-javafx)
+12. [Bring your own database](#12-bring-your-own-database)
+13. [Cross-platform scenarios](#13-cross-platform-scenarios)
+14. [Running tests](#14-running-tests)
+15. [Allure reporting](#15-allure-reporting)
+16. [CI/CD](#16-cicd)
+17. [Troubleshooting](#17-troubleshooting)
 
 ---
 
@@ -33,7 +34,8 @@ This guide walks you through creating an **E2E test project from scratch** using
 | Web tests | Playwright browsers | `npx playwright install` |
 | Mobile tests | Maestro CLI + Java 17+ | `curl -fsSL https://get.maestro.mobile.dev \| bash` |
 | Mobile tests | Android SDK + device/emulator | Android Studio or `sdkmanager` |
-| Desktop tests | Java 21+ | `brew install openjdk@21` (macOS) |
+| Flutter Desktop (macOS) | Flutter SDK ≥ 3.19 + Xcode | `brew install flutter` or [flutter.dev](https://flutter.dev/docs/get-started/install/macos) |
+| Desktop tests (JavaFX) | Java 21+ | `brew install openjdk@21` (macOS) |
 | Reports | Allure CLI | bundled via `allure-commandline` |
 | Database (optional) | Whatever your app uses | — |
 
@@ -119,6 +121,7 @@ my-e2e/
 │   ├── web/
 │   ├── api/
 │   ├── mobile/
+│   ├── flutter-desktop/
 │   ├── desktop/
 │   └── cross-platform/
 ├── step-definitions/          TypeScript step definitions
@@ -185,6 +188,7 @@ Conductor registers Before/After hooks that activate automatically based on **sc
 |---|---|
 | `@web` | Browser launches before scenario; failure screenshot attached; browser closes after |
 | `@mobile` | Logs target Maestro device |
+| `@flutter-desktop` | Flutter macOS app launches before; failure screenshot attached; app closes after |
 | `@desktop` | JavaFX app launches via agent JAR; failure screenshot; app closes |
 | `@database` | DB driver connects before, disconnects after |
 | `@cross-platform` | All of the above |
@@ -193,12 +197,13 @@ Conductor registers Before/After hooks that activate automatically based on **sc
 Drivers are also **lazily instantiated** on first access:
 
 ```typescript
-this.web    // ← launches the browser (if not already launched)
-this.page   // ← active Page on the WebDriver
-this.api    // ← shares cookies with WebDriver if both are active
-this.maestro
-this.fx     // ← JavaFX driver
-this.db     // ← throws unless you registered an adapter
+this.web              // ← launches the browser (if not already launched)
+this.page             // ← active Page on the WebDriver
+this.api              // ← shares cookies with WebDriver if both are active
+this.maestro          // ← Maestro CLI runner
+this.flutterDesktop   // ← Flutter macOS app via Dart VM service
+this.fx               // ← JavaFX driver
+this.db               // ← throws unless you registered an adapter
 ```
 
 ---
@@ -435,7 +440,216 @@ MAESTRO_DEVICE=emulator-5554 ANDROID_HOME=$HOME/Library/Android/sdk \
 
 ---
 
-## 10. Add desktop scenarios (JavaFX)
+## 10. Add Flutter Desktop scenarios (macOS)
+
+`FlutterDesktopDriver` launches a Flutter `.app` binary compiled for macOS and controls it over the **Dart VM service** (`ext.flutter.driver` JSON-RPC). It is the Flutter-desktop equivalent of Maestro for mobile, but talks directly to the running Dart VM instead of delegating to a CLI tool.
+
+### Prerequisites
+
+| Tool | Minimum version | Notes |
+|---|---|---|
+| Flutter SDK | 3.19 | `flutter --version` |
+| Xcode | 14+ | For macOS profile builds |
+| macOS | 12 (Monterey) | Earlier versions untested |
+
+```bash
+flutter doctor   # verify the macOS toolchain is ready
+```
+
+### Prepare the Flutter app
+
+Flutter Desktop automation requires two additions to your Flutter project:
+
+**1. A test entry point (`lib/main_test.dart`)** that enables the driver extension:
+
+```dart
+import 'dart:convert';
+import 'package:flutter_driver/driver_extension.dart';
+import 'package:myapp/driver_actions.dart';
+import 'main.dart' as app;
+
+void main() {
+  enableFlutterDriverExtension(handler: (message) async {
+    if (message == null || message.isEmpty) return 'error: empty message';
+    try {
+      final Map<String, dynamic> cmd =
+          jsonDecode(message) as Map<String, dynamic>;
+      final action = cmd['action'] as String?;
+      if (action == null) return 'error: missing "action" key';
+      final handler = driverActions[action];
+      if (handler == null) return 'error: unknown action "$action"';
+      return await handler(cmd);
+    } catch (e) {
+      return 'error: $e';
+    }
+  });
+  app.main();
+}
+```
+
+**2. An action registry (`lib/driver_actions.dart`)**:
+
+```dart
+typedef DriverActionHandler = Future<String> Function(Map<String, dynamic> args);
+final Map<String, DriverActionHandler> driverActions = {};
+```
+
+Populate this map from your widget's `State.initState()` (gated on a `--dart-define=DISABLE_SWIPE_GESTURES=true` compile flag so production builds are unaffected):
+
+```dart
+const _testMode = bool.fromEnvironment('DISABLE_SWIPE_GESTURES', defaultValue: false);
+
+@override
+void initState() {
+  super.initState();
+  if (_testMode) _registerDriverActions();
+}
+
+void _registerDriverActions() {
+  driverActions['refresh'] = (args) async {
+    await _loadData();
+    return 'ok';
+  };
+  driverActions['waitUntilLoaded'] = (args) async {
+    while (_loading) {
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    return 'ok';
+  };
+  // Add any app-specific actions here (toggle, edit, delete, etc.)
+}
+```
+
+**3. macOS network entitlement** — if your app calls localhost (e.g. a REST API), add to `macos/Runner/DebugProfile.entitlements`:
+
+```xml
+<key>com.apple.security.network.client</key>
+<true/>
+```
+
+Without this, macOS sandboxes the process and all outbound HTTP connections fail silently.
+
+### Build the test binary
+
+```bash
+# From your Flutter app root (apps/mobile/ in the conductor example)
+flutter build macos --profile \
+  --dart-define=DISABLE_SWIPE_GESTURES=true \
+  -t lib/main_test.dart
+```
+
+Or use the root-level npm script (conductor example):
+
+```bash
+npm run flutter:build:macos
+```
+
+The built app lands at `build/macos/Build/Products/Profile/<AppName>.app`.
+
+### Configure `FlutterDesktopConfig`
+
+In your `conductor.config.ts` (or environment config):
+
+```typescript
+import type { EnvironmentConfig } from 'conductor-e2e';
+import * as path from 'path';
+
+export const config: Partial<EnvironmentConfig> = {
+  flutterDesktop: {
+    appPath: path.resolve(
+      __dirname,
+      '../apps/mobile/build/macos/Build/Products/Profile/todoapp.app/Contents/MacOS/todoapp'
+    ),
+    dartVmServicePort: 8888,
+    defaultTimeoutMs: 15000,
+    screenshotDir: 'reports/screenshots'
+  }
+};
+```
+
+### Step definitions
+
+```typescript
+import { Given, When, Then } from '@cucumber/cucumber';
+import { ConductorWorld } from 'conductor-e2e';
+import type { Finder } from 'conductor-e2e';
+
+const TIMEOUT = { timeout: 60000 };
+
+const byText  = (text: string):    Finder => ({ type: 'ByText',         value: text    });
+const byKey   = (key: string):     Finder => ({ type: 'ByValueKey',     value: key     });
+
+Given('the Flutter desktop app is running', TIMEOUT, async function (this: ConductorWorld) {
+  await this.flutterDesktop.launch();
+  await this.flutterDesktop.waitFor(byText('My Todos'), 15000);
+  // Drain the initial data load before the test acts on the state.
+  await this.flutterDesktop.requestData(JSON.stringify({ action: 'waitUntilLoaded' }), 15000);
+});
+
+When('I add a todo {string} via the Flutter desktop app', TIMEOUT,
+  async function (this: ConductorWorld, title: string) {
+    await this.flutterDesktop.tap(byKey('add-todo-fab'));
+    await this.flutterDesktop.waitFor(byKey('dialog-title-input'));
+    // Inject text directly into the controller via requestData — avoids the
+    // TestTextInput mock path where _client stays null on macOS desktop.
+    const resp = await this.flutterDesktop.requestData(
+      JSON.stringify({ action: 'setDialogText', text: title }),
+      10000
+    );
+    if (resp.startsWith('error:')) throw new Error(`setDialogText failed: ${resp}`);
+    await this.flutterDesktop.tap(byText('Save'));
+    await this.flutterDesktop.waitFor(byText(title));
+  });
+
+Then('the Flutter desktop app shows {string}', TIMEOUT,
+  async function (this: ConductorWorld, text: string) {
+    await this.flutterDesktop.waitFor(byText(text));
+  });
+```
+
+### `requestData` — the key pattern for macOS desktop
+
+On macOS desktop, `flutter_driver`'s gesture-based `tap` command **never resolves for widgets inside a `ListView` or `Scrollable`**. The `RawGestureDetector` with `HitTestBehavior.opaque` in Scrollable absorbs hit tests, so `waitForTappable()` never returns true.
+
+The solution: bypass the gesture system entirely by calling app-side action handlers via `requestData()`. Your step definition sends a JSON command, the app dispatches it to the matching handler in `driverActions`, and returns a result string.
+
+```typescript
+// ✅ Use requestData for any action on a widget inside a list
+const resp = await this.flutterDesktop.requestData(
+  JSON.stringify({ action: 'toggleTodo', title: 'Buy groceries' }),
+  15000
+);
+if (resp.startsWith('error:')) throw new Error(resp);
+
+// ✅ Use tap/waitFor for top-level widgets (AppBar buttons, dialogs, etc.)
+await this.flutterDesktop.tap(byKey('add-todo-fab'));
+```
+
+### Add a `@flutter-desktop` Cucumber profile
+
+In `cucumber.js`:
+
+```js
+flutterDesktop: {
+  ...require('./cucumber.js').default,
+  paths: ['features/flutter-desktop/**/*.feature'],
+  tags: '@flutter-desktop'
+}
+```
+
+Run with:
+
+```bash
+npx cucumber-js --profile flutterDesktop
+# or using the npm script from the example:
+npm run test:flutter-desktop
+```
+
+Tag your scenarios with `@flutter-desktop` — the built-in hook will launch the app before the scenario and close it after (with a failure screenshot if the scenario fails).
+
+---
+
+## 11. Add desktop scenarios (JavaFX)
 
 Conductor uses [`javafx-driver`](https://www.npmjs.com/package/javafx-driver) which spawns your JavaFX app with an agent JAR (`fxagent.jar`) attached. The agent exposes the JavaFX scene graph over a local HTTP port.
 
@@ -494,7 +708,7 @@ Tag with `@desktop` — the after-hook will close the JavaFX process automatical
 
 ---
 
-## 11. Bring your own database
+## 12. Bring your own database
 
 `DatabaseDriver` is an **abstract class**, not bundled with a default driver. Implement one for your DB:
 
@@ -533,7 +747,7 @@ Now `this.db.query(...)` works in any scenario tagged `@database` (and `@cross-p
 
 ---
 
-## 12. Cross-platform scenarios
+## 13. Cross-platform scenarios
 
 Tag with `@cross-platform` to activate **all** drivers. A typical sync test:
 
@@ -551,7 +765,7 @@ Each `Then` step uses a different driver — they share the **same `ConductorWor
 
 ---
 
-## 13. Running tests
+## 14. Running tests
 
 ```bash
 # All scenarios
@@ -577,12 +791,13 @@ npx cucumber-js --dry-run
 ```bash
 HEADLESS=false BROWSER=firefox npx cucumber-js --tags @web
 MAESTRO_DEVICE=emulator-5554 npx cucumber-js --tags @mobile
-DEBUG_MAESTRO=0 npx cucumber-js --tags @mobile  # silence Maestro output
+DEBUG_MAESTRO=0 npx cucumber-js --tags @mobile          # silence Maestro output
+npx cucumber-js --tags @flutter-desktop                  # Flutter Desktop (macOS)
 ```
 
 ---
 
-## 14. Allure reporting
+## 15. Allure reporting
 
 Conductor's example is preconfigured with `allure-cucumberjs/reporter`. Cucumber writes JSON + Allure source files into `allure-results/`. Generate the HTML report:
 
@@ -608,7 +823,7 @@ await this.attach(screenshot, 'image/png');
 
 ---
 
-## 15. CI/CD
+## 16. CI/CD
 
 A minimal GitHub Actions workflow that runs the non-mobile suites on every push:
 
@@ -646,7 +861,7 @@ Mobile tests need either a self-hosted runner with an Android emulator, or [Maes
 
 ---
 
-## 16. Troubleshooting
+## 17. Troubleshooting
 
 ### Cucumber says "0 scenarios"
 
@@ -692,7 +907,54 @@ Known Maestro issue ([#998](https://github.com/mobile-dev-inc/Maestro/issues/998
 - Set `autofocus: false` on dialog `TextField`s
 - If still stuck, retry the Maestro flow once with `--reinstall-driver` (Conductor's `MaestroDriver` does this automatically on gRPC `UNAVAILABLE`)
 
-### Desktop: JavaFX app exits immediately
+### Flutter Desktop: app cannot connect to localhost (`SocketException`)
+
+Profile-mode macOS builds run inside the App Sandbox. Without the `network.client` entitlement the process cannot make outgoing TCP connections. Add to `macos/Runner/DebugProfile.entitlements`:
+
+```xml
+<key>com.apple.security.network.client</key>
+<true/>
+```
+
+Rebuild after changing entitlements.
+
+### Flutter Desktop: `tap` hangs and times out after 10 s
+
+`flutter_driver`'s `waitForTappable()` never returns true for widgets inside a `ListView` (or any `Scrollable`). The `RawGestureDetector` with `HitTestBehavior.opaque` inside `Scrollable` absorbs hit tests, so the widget is never considered "hit-testable."
+
+Use `requestData()` with a named action instead of `tap()` for any widget inside a list:
+
+```typescript
+await this.flutterDesktop.requestData(
+  JSON.stringify({ action: 'toggleTodo', title: 'Buy groceries' }),
+  15000
+);
+```
+
+### Flutter Desktop: `enterText` is silently ignored
+
+When `autofocus: true` is set on a dialog `TextField`, the `TextInput.setClient` connection is established before `set_text_entry_emulation` registers the mock. The mock's `_client` stays null and `enter_text` silently no-ops.
+
+Fix: set `autofocus: false` on dialog `TextField`s **and** use a `setDialogText` `requestData` action to inject text directly into the widget's `TextEditingController`:
+
+```dart
+driverActions['setDialogText'] = (args) async {
+  _activeDialogController?.text = args['text'] as String;
+  return 'ok';
+};
+```
+
+### Flutter Desktop: todos missing / "Todo not found" errors
+
+A race between `initState()`'s `_loadTodos()` and your test steps. The `waitFor('My Todos')` assertion passes as soon as the AppBar renders — before the initial list load finishes. If the test creates a todo and then refreshes, the still-running initial load can overwrite `_todos` with an empty list.
+
+Fix: add a `waitUntilLoaded` action that polls until `_loading == false`, and call it after launching:
+
+```typescript
+await this.flutterDesktop.requestData(JSON.stringify({ action: 'waitUntilLoaded' }), 15000);
+```
+
+### JavaFX Desktop: app exits immediately
 
 The agent JAR or app classpath is wrong. Test directly:
 
@@ -712,6 +974,6 @@ Make sure `allure-cucumberjs/reporter` is in your `format` array AND that you ha
 
 ## Where to go next
 
-- [Example project](../example/README.md) — a working multi-platform setup using all 4 drivers
+- [Example project](../example/README.md) — a working multi-platform setup using all 5 drivers
 - [`CLAUDE.md`](../CLAUDE.md) — framework internals
 - [GitHub Issues](https://github.com/nouhouari/conductor/issues) — report bugs / request features
