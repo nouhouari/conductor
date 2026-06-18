@@ -23,5 +23,14 @@ export const defaultConfig: EnvironmentConfig = {
     agentJar: require('path').resolve(__dirname, '../../apps/desktop/agent/fxagent.jar'),
     defaultTimeoutMs: 10000,
     screenshotDir: 'reports/screenshots'
+  },
+  flutterDesktop: {
+    appPath: require('path').resolve(
+      __dirname,
+      '../../apps/mobile/build/macos/Build/Products/Debug/todoapp.app/Contents/MacOS/todoapp'
+    ),
+    defaultTimeoutMs: 10000,
+    launchTimeoutMs: 30000,
+    screenshotDir: 'reports/screenshots'
   }
 };

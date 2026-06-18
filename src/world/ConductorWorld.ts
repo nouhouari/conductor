@@ -7,6 +7,7 @@ import { ApiDriver } from '../drivers/ApiDriver';
 import { MaestroDriver } from '../drivers/MaestroDriver';
 import { DatabaseDriver } from '../drivers/DatabaseDriver';
 import { JavaFxDriver } from 'javafx-driver';
+import { FlutterDesktopDriver } from '../drivers/FlutterDesktopDriver';
 import { createLogger } from '../support/logger';
 
 export class ConductorWorld extends World {
@@ -19,6 +20,7 @@ export class ConductorWorld extends World {
   private _maestroDriver: MaestroDriver | null = null;
   private _dbDriver: DatabaseDriver | null = null;
   private _fxDriver: JavaFxDriver | null = null;
+  private _flutterDesktopDriver: FlutterDesktopDriver | null = null;
 
   constructor(options: IWorldOptions) {
     super(options);
@@ -72,6 +74,27 @@ export class ConductorWorld extends World {
   async closeFx(): Promise<void> {
     await this._fxDriver?.close();
     this._fxDriver = null;
+  }
+
+  // Desktop (Flutter)
+
+  get flutterDesktop(): FlutterDesktopDriver {
+    if (!this._flutterDesktopDriver) {
+      if (!this.config.flutterDesktop) {
+        throw new Error('No flutterDesktop config. Set config.flutterDesktop with FlutterDesktopConfig.');
+      }
+      this._flutterDesktopDriver = new FlutterDesktopDriver(this.config);
+    }
+    return this._flutterDesktopDriver;
+  }
+
+  get isFlutterDesktopLaunched(): boolean {
+    return this._flutterDesktopDriver?.isLaunched ?? false;
+  }
+
+  async closeFlutterDesktop(): Promise<void> {
+    await this._flutterDesktopDriver?.close();
+    this._flutterDesktopDriver = null;
   }
 
   // Database (plugin — user registers their adapter)

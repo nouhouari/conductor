@@ -24,6 +24,12 @@ function loadConfig(): EnvironmentConfig {
   if (process.env.HEADLESS) base.web.headless = process.env.HEADLESS !== 'false';
   if (process.env.BROWSER) base.web.browserName = process.env.BROWSER as EnvironmentConfig['web']['browserName'];
   if (process.env.MAESTRO_DEVICE) base.mobile.deviceId = process.env.MAESTRO_DEVICE;
+  if (process.env.FLUTTER_DESKTOP_APP_PATH && base.flutterDesktop) {
+    base.flutterDesktop.appPath = process.env.FLUTTER_DESKTOP_APP_PATH;
+  }
+  if (process.env.FLUTTER_DESKTOP_VM_PORT && base.flutterDesktop) {
+    base.flutterDesktop.vmServicePort = Number(process.env.FLUTTER_DESKTOP_VM_PORT);
+  }
 
   return base;
 }

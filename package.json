@@ -64,10 +64,12 @@
     "javafx-driver": "^0.2.2",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",
-    "playwright": "^1.44.0"
+    "playwright": "^1.44.0",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/ws": "^8.18.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.4.0"
   }

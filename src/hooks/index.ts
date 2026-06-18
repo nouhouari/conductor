@@ -7,3 +7,4 @@ export * from './browser.hooks';
 export * from './database.hooks';
 export * from './maestro.hooks';
 export * from './desktop.hooks';
+export * from './flutterDesktop.hooks';
