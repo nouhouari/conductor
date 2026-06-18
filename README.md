@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/conductor-mcp.svg?label=conductor-mcp)](https://www.npmjs.com/package/conductor-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A multi-platform E2E test framework where **one Cucumber scenario** can drive a **web browser**, a **REST API**, a **Flutter mobile app**, a **JavaFX desktop app**, and a **database** — all from TypeScript.
+A multi-platform E2E test framework where **one Cucumber scenario** can drive a **web browser**, a **REST API**, a **Flutter mobile app**, a **Flutter desktop app** (macOS), a **JavaFX desktop app**, and a **database** — all from TypeScript.
 
 ```gherkin
 @cross-platform
@@ -26,7 +26,8 @@ Scenario: Todo created on web appears on the Flutter mobile app
 | Web automation | [Playwright](https://playwright.dev) |
 | API testing | Playwright `APIRequestContext` |
 | Mobile automation | [Maestro CLI](https://maestro.mobile.dev) (Flutter / native) |
-| Desktop automation | [`javafx-driver`](https://www.npmjs.com/package/javafx-driver) (JavaFX) |
+| Desktop automation (Flutter) | Dart VM service / `ext.flutter.driver` JSON-RPC (macOS) |
+| Desktop automation (JavaFX) | [`javafx-driver`](https://www.npmjs.com/package/javafx-driver) |
 | Database | Plugin interface (bring your own adapter) |
 | Reporting | [Allure](https://allurereport.org/) (`allure-cucumberjs`) |
 
@@ -49,8 +50,9 @@ async function (this: ConductorWorld) {
   await this.web.launch();                        // Playwright browser
   await this.page.goto('/login');                 // active page
   await this.api.post('/todos', { title: ... });  // shared HTTP client
-  await this.maestro.runOrThrow('verify-todo');   // Flutter mobile flow
-  await this.fx.locator('#save-btn').click();     // JavaFX desktop
+  await this.maestro.runOrThrow('verify-todo');           // Flutter mobile flow
+  await this.flutterDesktop.tap('addButton');             // Flutter desktop (macOS)
+  await this.fx.locator('#save-btn').click();             // JavaFX desktop
   await this.db.query('SELECT ...');              // your adapter
 }
 ```
@@ -61,6 +63,7 @@ Drivers are lazily instantiated. Tag-driven hooks manage their lifecycle:
 |---|---|
 | `@web` / `@cross-platform` | Launches browser, screenshots failures, closes |
 | `@mobile` / `@cross-platform` | Targets the configured Maestro device |
+| `@flutter-desktop` | Launches Flutter macOS app, screenshots failures, closes |
 | `@desktop` / `@cross-platform` | Launches JavaFX app via agent JAR, closes |
 | `@database` / `@cross-platform` | Connects DB before, disconnects after |
 
@@ -77,7 +80,7 @@ conductor/
 ├── config/                Environment configs (default/dev/staging)
 ├── example/               Working multi-platform example project
 ├── apps/                  Sample apps under test
-│   ├── mobile/            Flutter Android todo app
+│   ├── mobile/            Flutter todo app (Android + macOS desktop)
 │   ├── desktop/           JavaFX todo app
 │   └── server/            Express server + web UI + REST API
 ├── docs/                  User guide, API docs
@@ -105,7 +108,20 @@ npx cucumber-js --tags 'not @mobile' \
 npm run report && npm run report:open
 ```
 
-For mobile and desktop, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+For mobile, Flutter Desktop, and JavaFX desktop, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+
+### Flutter Desktop (macOS)
+
+```bash
+# Build the test entry point (from repo root)
+npm run flutter:build:macos
+
+# Run Flutter Desktop scenarios
+cd example
+npm run test:flutter-desktop
+```
+
+The build uses `lib/main_test.dart` as the entry point (which wires `enableFlutterDriverExtension`) and sets `DISABLE_SWIPE_GESTURES=true` to enable the AppBar Add button and the app-side action registry used by `requestData()`.
 
 ## Documentation
 
