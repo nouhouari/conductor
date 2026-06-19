@@ -15,7 +15,7 @@ export { DatabaseDriver } from './drivers/DatabaseDriver';
 export type { QueryResult } from './drivers/DatabaseDriver';
 
 export { FlutterDesktopDriver } from './drivers/FlutterDesktopDriver';
-export type { Finder, FinderType } from './drivers/FlutterDesktopDriver';
+export type { Finder, FinderType, Offset, OffsetType, WaitCondition } from './drivers/FlutterDesktopDriver';
 
 export { BasePage } from './pages/BasePage';
 

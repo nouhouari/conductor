@@ -24,6 +24,15 @@ export interface Finder {
   value: string;
 }
 
+export type OffsetType = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' | 'center';
+
+export interface Offset {
+  dx: number;
+  dy: number;
+}
+
+export type WaitCondition = 'NoPendingFrames' | 'NoTransientCallbacks' | 'FirstFrameRasterized';
+
 interface PendingRpc {
   resolve: (value: unknown) => void;
   reject: (err: Error) => void;
@@ -195,6 +204,122 @@ export class FlutterDesktopDriver {
     fs.writeFileSync(outPath, Buffer.from(result.screenshot, 'base64'));
     return outPath;
   }
+
+  /** Double-tap a widget identified by `finder`. */
+  async doubleTap(finder: Finder, timeoutMs?: number): Promise<void> {
+    const t = timeoutMs ?? this.cfg.defaultTimeoutMs ?? 10_000;
+    await this.driverCommand({ command: 'double_tap', ...this.serializeFinder(finder), timeout: String(t) }, t + 2000);
+  }
+
+  /** Long-press a widget identified by `finder`. */
+  async longPress(finder: Finder, timeoutMs?: number): Promise<void> {
+    const t = timeoutMs ?? this.cfg.defaultTimeoutMs ?? 10_000;
+    await this.driverCommand({ command: 'long_press', ...this.serializeFinder(finder), timeout: String(t) }, t + 2000);
+  }
+
+  /**
+   * Scroll a Scrollable widget identified by `finder` by (`dx`, `dy`) pixels
+   * over `durationMs` milliseconds at `frequency` Hz.
+   */
+  async scroll(
+    finder: Finder,
+    dx: number,
+    dy: number,
+    durationMs?: number,
+    frequency?: number,
+    timeoutMs?: number
+  ): Promise<void> {
+    const duration = durationMs ?? 300;
+    const freq = frequency ?? 60;
+    const wireTimeout = timeoutMs ?? (duration + 5_000);
+    await this.driverCommand(
+      { command: 'scroll', ...this.serializeFinder(finder), dx, dy, duration, frequency: freq },
+      wireTimeout
+    );
+  }
+
+  /**
+   * Scroll until `finder` is visible.
+   * `alignment` controls where the widget lands: 0.0 = top edge, 0.5 = center, 1.0 = bottom edge.
+   */
+  async scrollIntoView(finder: Finder, alignment?: number, timeoutMs?: number): Promise<void> {
+    const t = timeoutMs ?? this.cfg.defaultTimeoutMs ?? 10_000;
+    await this.driverCommand(
+      { command: 'scrollIntoView', ...this.serializeFinder(finder), alignment: alignment ?? 0.0 },
+      t + 2000
+    );
+  }
+
+  /**
+   * Clear the text field at `finder` by enabling text-entry emulation,
+   * tapping to focus, then setting its value to an empty string.
+   */
+  async clearText(finder: Finder, timeoutMs?: number): Promise<void> {
+    if (!this.textEntryEmulationEnabled) {
+      await this.driverCommand({ command: 'set_text_entry_emulation', enabled: 'true' }, timeoutMs);
+      this.textEntryEmulationEnabled = true;
+    }
+    await this.tap(finder, timeoutMs);
+    await this.driverCommand({ command: 'enter_text', text: '' }, timeoutMs);
+  }
+
+  /**
+   * Non-throwing visibility probe: returns `true` if `finder` resolves within
+   * `timeoutMs` (default 500 ms), `false` otherwise. Use for conditional
+   * assertions instead of `waitFor` when absence is acceptable.
+   */
+  async isVisible(finder: Finder, timeoutMs?: number): Promise<boolean> {
+    try {
+      await this.waitFor(finder, timeoutMs ?? 500);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Return the screen coordinates of a point on the widget at `finder`.
+   * `offsetType` defaults to `'center'`.
+   */
+  async getOffset(finder: Finder, offsetType?: OffsetType, timeoutMs?: number): Promise<Offset> {
+    const result = await this.driverCommand(
+      { command: 'get_offset', ...this.serializeFinder(finder), offsetType: offsetType ?? 'center' },
+      timeoutMs
+    ) as { dx?: number; dy?: number };
+    return { dx: result.dx ?? 0, dy: result.dy ?? 0 };
+  }
+
+  /**
+   * Wait until a predefined Flutter condition is satisfied — the app-level
+   * equivalent of Playwright's `page.waitForLoadState()`.
+   *
+   *   `'NoPendingFrames'`       — no animation frames scheduled (app is idle)
+   *   `'NoTransientCallbacks'`  — no pending transient callbacks
+   *   `'FirstFrameRasterized'`  — first frame has been rendered
+   */
+  async waitForCondition(condition: WaitCondition, timeoutMs?: number): Promise<void> {
+    const t = timeoutMs ?? this.cfg.defaultTimeoutMs ?? 10_000;
+    await this.driverCommand(
+      { command: 'waitForCondition', conditionJson: JSON.stringify({ conditionName: condition }), timeout: String(t) },
+      t + 2000
+    );
+  }
+
+  /**
+   * Enable or disable Flutter's frame-sync during driver commands. Set to
+   * `false` before triggering heavy animations so the driver does not stall
+   * waiting for each frame to settle; restore with `setFrameSync(true)` when
+   * done. Mirrors disabling CSS transitions in web tests.
+   */
+  async setFrameSync(enabled: boolean, timeoutMs?: number): Promise<void> {
+    await this.driverCommand({ command: 'set_frame_sync', enabled: String(enabled) }, timeoutMs);
+  }
+
+  /**
+   * NOTE: `isEnabled` (checking whether a widget is interactive) is not part
+   * of the `ext.flutter.driver` protocol. Use `requestData()` with an app-side
+   * handler that inspects widget state and returns the result as a string.
+   */
 
   // ─── internals ──────────────────────────────────────────────────────────────
 

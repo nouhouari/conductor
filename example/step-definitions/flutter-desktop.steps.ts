@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { Given, When, Then } from '@cucumber/cucumber';
 import { ConductorWorld } from '@nouhouari/conductor-e2e';
-import type { Finder } from '@nouhouari/conductor-e2e';
+import type { Finder, WaitCondition } from '@nouhouari/conductor-e2e';
 
 const TIMEOUT = { timeout: 60000 };
 
@@ -90,4 +90,38 @@ Then('I take a Flutter desktop screenshot {string}', TIMEOUT, async function (th
   } catch (e: any) {
     this.logger.warn({ error: e.message }, 'Flutter desktop screenshot failed');
   }
+});
+
+When('I double-tap {string} key via Flutter desktop', TIMEOUT, async function (this: ConductorWorld, key: string) {
+  await this.flutterDesktop.doubleTap(byKey(key));
+});
+
+When('I long-press {string} key via Flutter desktop', TIMEOUT, async function (this: ConductorWorld, key: string) {
+  await this.flutterDesktop.longPress(byKey(key));
+});
+
+When('I scroll {string} into view via Flutter desktop', TIMEOUT, async function (this: ConductorWorld, text: string) {
+  await this.flutterDesktop.scrollIntoView(byText(text));
+});
+
+When('I clear the Flutter desktop text field {string}', TIMEOUT, async function (this: ConductorWorld, key: string) {
+  await this.flutterDesktop.clearText(byKey(key));
+});
+
+When('I wait for the Flutter desktop app to be idle', TIMEOUT, async function (this: ConductorWorld) {
+  await this.flutterDesktop.waitForCondition('NoPendingFrames');
+});
+
+When('I wait for Flutter desktop condition {string}', TIMEOUT, async function (this: ConductorWorld, condition: string) {
+  await this.flutterDesktop.waitForCondition(condition as WaitCondition);
+});
+
+Then('{string} is visible on the Flutter desktop app', TIMEOUT, async function (this: ConductorWorld, text: string) {
+  const visible = await this.flutterDesktop.isVisible(byText(text));
+  if (!visible) throw new Error(`Expected "${text}" to be visible but was not found`);
+});
+
+Then('{string} is not visible on the Flutter desktop app', TIMEOUT, async function (this: ConductorWorld, text: string) {
+  const visible = await this.flutterDesktop.isVisible(byText(text), 500);
+  if (visible) throw new Error(`Expected "${text}" to be absent but was visible`);
 });

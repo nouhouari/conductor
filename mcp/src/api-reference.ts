@@ -7,7 +7,7 @@
  * Source of truth: src/world/ConductorWorld.ts, src/drivers/*.ts, src/pages/BasePage.ts
  */
 
-export type ApiSurface = 'world' | 'web' | 'api' | 'maestro' | 'fx' | 'db' | 'page';
+export type ApiSurface = 'world' | 'web' | 'api' | 'maestro' | 'flutter' | 'fx' | 'db' | 'page';
 
 const REFERENCES: Record<ApiSurface, string> = {
   world: `## ConductorWorld
@@ -39,6 +39,8 @@ require.resolve('@nouhouari/conductor-e2e/dist/src/hooks/index')
 | \`api\` | \`ApiDriver\` | Playwright APIRequestContext wrapper. Call \`init()\` before first use. |
 | \`request\` | \`APIRequestContext\` | Shortcut for \`this.api.client\`. |
 | \`maestro\` | \`MaestroDriver\` | Maestro CLI runner for mobile flows. |
+| \`flutterDesktop\` | \`FlutterDesktopDriver\` | Flutter macOS desktop driver. Requires \`config.flutterDesktop\` to be set. |
+| \`isFlutterDesktopLaunched\` | \`boolean\` | Whether the Flutter desktop app is currently running. |
 | \`fx\` | \`JavaFxDriver\` | JavaFX desktop driver. Requires \`config.desktop\` to be set. |
 | \`db\` | \`DatabaseDriver\` | Database driver — throws unless registered via \`setDb()\`. |
 
@@ -60,6 +62,7 @@ require.resolve('@nouhouari/conductor-e2e/dist/src/hooks/index')
 |---|---|
 | \`@web\` | Browser launch + failure screenshot + browser close |
 | \`@mobile\` | Logs target Maestro device |
+| \`@flutter-desktop\` | Failure screenshot + Flutter desktop driver close |
 | \`@desktop\` | JavaFX launch + failure screenshot + close |
 | \`@database\` | DB connect before, DB disconnect after |
 | \`@cross-platform\` | All of the above |
@@ -208,6 +211,109 @@ await this.maestro.runOrThrow('create-todo', {
 \`\`\`
 
 In the flow: \`inputText: \${TODO_TITLE}\`
+`,
+
+  flutter: `## FlutterDesktopDriver
+
+Drives a Flutter macOS desktop app (built with \`enableFlutterDriverExtension()\`) by
+spawning the executable, reading the Dart VM service URL, and sending \`ext.flutter.driver\`
+JSON-RPC commands over WebSocket. Accessed via \`this.flutterDesktop\` on \`ConductorWorld\`.
+Activated by the \`@flutter-desktop\` tag hook.
+
+### Finders
+
+\`\`\`typescript
+import type { Finder } from '@nouhouari/conductor-e2e';
+
+const byKey  = (key: string): Finder => ({ type: 'ByValueKey', value: key });
+const byText = (text: string): Finder => ({ type: 'ByText', value: text });
+const byType = (type: string): Finder => ({ type: 'ByType', value: type });
+const byTip  = (msg: string): Finder  => ({ type: 'ByTooltipMessage', value: msg });
+\`\`\`
+
+Finder types: \`'ByValueKey'\` (widget key), \`'ByText'\` (Text widget content),
+\`'ByType'\` (Dart class name), \`'ByTooltipMessage'\`.
+
+### Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| \`launch\` | \`(): Promise<void>\` | Spawn the app and connect to the Dart VM service. |
+| \`close\` | \`(): Promise<void>\` | Terminate the app and close the WebSocket. |
+| \`isLaunched\` | \`boolean\` | Whether the driver is currently connected. |
+
+### Gesture & interaction methods
+
+All action methods accept an optional \`timeoutMs\` (default: \`config.flutterDesktop.defaultTimeoutMs ?? 10_000\`).
+
+| Method | Signature | Description |
+|---|---|---|
+| \`tap\` | \`(finder, timeoutMs?)\` | Tap a widget. |
+| \`doubleTap\` | \`(finder, timeoutMs?)\` | Double-tap a widget. |
+| \`longPress\` | \`(finder, timeoutMs?)\` | Long-press a widget. |
+| \`enterText\` | \`(finder, text, timeoutMs?)\` | Focus \`finder\` and type \`text\` (replaces current value). |
+| \`clearText\` | \`(finder, timeoutMs?)\` | Clear a text field (focus + set empty string). |
+| \`scroll\` | \`(finder, dx, dy, durationMs?, frequency?, timeoutMs?)\` | Scroll a \`Scrollable\` widget by \`dx\`/\`dy\` pixels over \`durationMs\` ms. |
+| \`scrollIntoView\` | \`(finder, alignment?, timeoutMs?)\` | Scroll until \`finder\` is visible. \`alignment\`: 0.0 = top, 0.5 = center, 1.0 = bottom. |
+
+### Query methods
+
+| Method | Signature | Description |
+|---|---|---|
+| \`getText\` | \`(finder, timeoutMs?) → Promise<string>\` | Read the text of a \`Text\` widget. |
+| \`getOffset\` | \`(finder, offsetType?, timeoutMs?) → Promise<Offset>\` | Get screen coordinates. \`offsetType\`: \`'topLeft' \\| 'topRight' \\| 'bottomLeft' \\| 'bottomRight' \\| 'center'\` (default \`'center'\`). |
+| \`isVisible\` | \`(finder, timeoutMs?) → Promise<boolean>\` | Non-throwing probe — returns \`true\`/\`false\` (default probe timeout 500 ms). |
+
+### Wait methods
+
+| Method | Signature | Description |
+|---|---|---|
+| \`waitFor\` | \`(finder, timeoutMs?)\` | Wait until widget exists. Throws on timeout. |
+| \`waitForAbsent\` | \`(finder, timeoutMs?)\` | Wait until widget disappears. Throws on timeout. |
+| \`waitForCondition\` | \`(condition, timeoutMs?)\` | Wait for app-level condition: \`'NoPendingFrames'\` \\| \`'NoTransientCallbacks'\` \\| \`'FirstFrameRasterized'\`. Equivalent to \`page.waitForLoadState()\`. |
+
+### Advanced
+
+| Method | Signature | Description |
+|---|---|---|
+| \`requestData\` | \`(message, timeoutMs?) → Promise<string>\` | Send a JSON message to the app's \`enableFlutterDriverExtension\` data handler and return its response. Primary mechanism for app-side actions inside \`Scrollable\` lists (where \`hitTestable()\` never resolves). |
+| \`setFrameSync\` | \`(enabled, timeoutMs?)\` | Disable/re-enable Flutter frame sync. Set \`false\` before heavy animations; restore with \`true\`. |
+| \`takeScreenshot\` | \`(name) → Promise<string>\` | Capture the Flutter render surface as PNG; returns the file path. |
+
+### Config (EnvironmentConfig.flutterDesktop)
+
+\`\`\`typescript
+interface FlutterDesktopConfig {
+  appPath: string;            // Absolute path to .app bundle (macOS)
+  defaultTimeoutMs?: number;  // Per-action timeout (default 10_000 ms)
+  launchTimeoutMs?: number;   // VM service wait timeout (default 30_000 ms)
+  vmServicePort?: number;     // Fixed VM service port (optional)
+  extraArgs?: string[];       // Extra CLI args
+  env?: Record<string, string>;
+  screenshotDir?: string;     // Default 'reports/screenshots'
+}
+\`\`\`
+
+### requestData pattern
+
+Use this instead of gesture-based actions for widgets inside a \`ListView\` or other
+\`Scrollable\` — \`hitTestable()\` never resolves for such widgets on macOS desktop.
+
+\`\`\`typescript
+// App-side (main_test.dart):
+enableFlutterDriverExtension(handler: (message) async {
+  final data = json.decode(message!);
+  if (data['action'] == 'toggleTodo') { ... return 'ok'; }
+});
+
+// Test-side:
+await this.flutterDesktop.requestData(JSON.stringify({ action: 'toggleTodo', title }));
+\`\`\`
+
+### isEnabled
+
+Not part of the \`ext.flutter.driver\` protocol. Use \`requestData()\` with an app-side
+handler that inspects widget state and returns the result as a string.
 `,
 
   fx: `## JavaFxDriver (javafx-driver)
@@ -360,6 +466,7 @@ export const ALL_SURFACES: readonly ApiSurface[] = [
   'web',
   'api',
   'maestro',
+  'flutter',
   'fx',
   'db',
   'page',
