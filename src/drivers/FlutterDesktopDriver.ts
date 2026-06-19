@@ -59,7 +59,7 @@ export class FlutterDesktopDriver {
   }
 
   get isLaunched(): boolean {
-    return this.proc !== null && this.ws !== null;
+    return this.ws !== null && this.isolateId !== null;
   }
 
   // ─── lifecycle ──────────────────────────────────────────────────────────────
@@ -93,6 +93,25 @@ export class FlutterDesktopDriver {
 
     await this.connectWebSocket(vmUrl);
     await this.resolveIsolateAndDriverExtension(launchTimeoutMs);
+    if (STREAM) process.stderr.write(`[flutter-desktop] ✔ ready (isolate=${this.isolateId})\n`);
+  }
+
+  /**
+   * Connect to an already-running Flutter app via its Dart VM service URL.
+   * Use instead of `launch()` when the app is already running — e.g.:
+   *   - **Android**: `adb forward tcp:PORT tcp:PORT`, then connect to `ws://localhost:PORT/TOKEN/ws`
+   *   - **iOS**: `iproxy PORT PORT DEVICE_UDID`, then connect
+   *   - **Windows / Linux desktop**: manage the process yourself and pass the URL
+   *
+   * Accepts either the HTTP form printed by the app (`http://localhost:PORT/TOKEN/`)
+   * or the WebSocket form directly (`ws://localhost:PORT/TOKEN/ws`).
+   */
+  async connect(vmServiceUrl: string, timeoutMs?: number): Promise<void> {
+    if (this.isLaunched) return;
+    const t = timeoutMs ?? this.cfg.launchTimeoutMs ?? 30_000;
+    if (STREAM) process.stderr.write(`\n[flutter-desktop] ⚡ connecting to ${vmServiceUrl}\n`);
+    await this.connectWebSocket(vmServiceUrl);
+    await this.resolveIsolateAndDriverExtension(t);
     if (STREAM) process.stderr.write(`[flutter-desktop] ✔ ready (isolate=${this.isolateId})\n`);
   }
 

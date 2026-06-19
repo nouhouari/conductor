@@ -9,6 +9,12 @@ const byText = (text: string): Finder => ({ type: 'ByText', value: text });
 const byTooltip = (tooltip: string): Finder => ({ type: 'ByTooltipMessage', value: tooltip });
 const byKey = (key: string): Finder => ({ type: 'ByValueKey', value: key });
 
+Given('the Flutter app is connected at {string}', TIMEOUT, async function (this: ConductorWorld, vmServiceUrl: string) {
+  // Use when the app is already running (mobile via adb/iproxy port-forward,
+  // or Windows/Linux desktop managed externally). Accepts HTTP or WS URL.
+  await this.flutterDesktop.connect(vmServiceUrl);
+});
+
 Given('the Flutter desktop app is running', TIMEOUT, async function (this: ConductorWorld) {
   await this.flutterDesktop.launch();
   await this.flutterDesktop.waitFor(byText('My Todos'), 15000);
