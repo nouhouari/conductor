@@ -1,5 +1,5 @@
 {
-  "name": "conductor-mcp",
+  "name": "@nouhouari/conductor-mcp",
   "version": "0.1.1",
   "description": "MCP server for AI-assisted E2E test authoring with the Conductor framework",
   "keywords": [
@@ -57,5 +57,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }
