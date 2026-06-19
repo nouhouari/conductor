@@ -1,6 +1,6 @@
 {
   "name": "@nouhouari/conductor-e2e",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Multi-platform E2E test framework — web (Playwright), API, mobile (Maestro), desktop (JavaFX), and database in one Cucumber scenario",
   "keywords": [
     "e2e",
