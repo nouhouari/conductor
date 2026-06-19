@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-06-19
+
+### Added
+
+- **`FlutterDesktopDriver`** — new TypeScript driver that launches a Flutter macOS `.app` binary, connects to its Dart VM service via WebSocket, and issues `ext.flutter.driver` JSON-RPC commands. Public API: `launch()`, `close()`, `tap(finder)`, `enterText(finder, text)`, `getText(finder)`, `waitFor(finder)`, `waitForAbsent(finder)`, `requestData(message)`, `takeScreenshot(name)`.
+- **`requestData()` action dispatch pattern** — primary mechanism for invoking app-side actions (toggle, edit, delete, etc.) via `enableFlutterDriverExtension`. Bypasses `hitTestable()` which never resolves for widgets inside a `ListView` on macOS desktop.
+- **`@flutter-desktop` tag** — new tag-driven hook that logs driver availability before the scenario and takes a failure screenshot + closes the driver after. Lives in `src/hooks/flutterDesktop.hooks.ts`.
+- **`FlutterDesktopConfig`** — new config key controlling the macOS `.app` binary path, Dart VM service port, and screenshot output directory.
+- **`apps/mobile/lib/main_test.dart`** — Flutter test entry point that wires `enableFlutterDriverExtension` to the action registry via JSON dispatch.
+- **`apps/mobile/lib/driver_actions.dart`** — app-side action registry for `toggleTodo`, `editTodoTitle`, `deleteTodo`, `setDialogText`, `refresh`, and `waitUntilLoaded`.
+- **macOS `DebugProfile.entitlements`** — adds `network.client` entitlement so the sandboxed profile build can reach the local API server.
+- **Flutter Desktop example scenarios** — feature file, step definitions, cucumber profile (`flutter-desktop`), and `npm run test:flutter-desktop` script covering home screen, create, toggle, edit, and delete (5 scenarios / 24 steps).
+- **`flutter:build:macos` script** — builds the Flutter macOS app in profile mode with `main_test.dart` as the entry point and injects `API_BASE_URL` and `DISABLE_SWIPE_GESTURES` dart-defines.
+
+### Fixed
+
+- macOS sandbox blocked outgoing HTTP from the profile build (missing `network.client` entitlement).
+- Race condition between `initState _loadTodos()` and test setup — resolved via `waitUntilLoaded` requestData action.
+- Flutter driver touch events do not fire `onPressed` on macOS desktop — bypassed via `requestData`.
+- `TestTextInput` mock `_client` is null on macOS — text is now set directly on the controller.
+
 ## [conductor-mcp 0.1.1] — 2026-05-29
 
 ### Fixed
