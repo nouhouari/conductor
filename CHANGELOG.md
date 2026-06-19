@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-06-19
+
+### Added
+
+- **`FlutterDesktopDriver`** — 9 new methods expanding the gesture and query API:
+  - `doubleTap(finder, timeoutMs?)` — double-tap gesture (`double_tap` command)
+  - `longPress(finder, timeoutMs?)` — long-press gesture (`long_press` command)
+  - `scroll(finder, dx, dy, durationMs?, frequency?, timeoutMs?)` — scroll a `Scrollable` widget by pixel offset
+  - `scrollIntoView(finder, alignment?, timeoutMs?)` — scroll until a widget is visible; `alignment` 0.0 = top, 0.5 = center, 1.0 = bottom
+  - `clearText(finder, timeoutMs?)` — clear a text field (enables text-entry emulation, taps to focus, sends empty string)
+  - `isVisible(finder, timeoutMs?)` → `boolean` — non-throwing visibility probe; returns `true`/`false` instead of throwing (default probe timeout 500 ms)
+  - `getOffset(finder, offsetType?, timeoutMs?)` → `{ dx, dy }` — get widget screen coordinates (`get_offset` command); `offsetType`: `'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' | 'center'`
+  - `waitForCondition(condition, timeoutMs?)` — wait for the app to reach a quiescent state, the Flutter equivalent of `page.waitForLoadState()`; conditions: `'NoPendingFrames'`, `'NoTransientCallbacks'`, `'FirstFrameRasterized'`
+  - `setFrameSync(enabled, timeoutMs?)` — pause/resume Flutter's frame-sync during heavy animations, mirrors disabling CSS transitions in web tests
+- **New exported types**: `OffsetType`, `Offset`, `WaitCondition`
+- **Example step definitions** for all new `FlutterDesktopDriver` methods
+
 ## [conductor-mcp 0.1.2] — 2026-06-19
 
 ### Changed
