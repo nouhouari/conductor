@@ -71,13 +71,13 @@ jobs:
       # and derives the hooks path via .replace() — if the framework ever renames
       # or moves dist/src/hooks/index.js this step will fail loudly.
 
-      - name: Drift check — conductor-e2e hooks path
+      - name: Drift check — @nouhouari/conductor-e2e hooks path
         run: |
           node - <<'EOF'
           const path = require('path');
           let conductorMain;
           try {
-            conductorMain = require.resolve('conductor-e2e');
+            conductorMain = require.resolve('@nouhouari/conductor-e2e');
           } catch (e) {
             // In CI the package is not published yet; resolve from the local build
             // artefact (dist/ is present after the build step above).

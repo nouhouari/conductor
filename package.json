@@ -1,5 +1,5 @@
 {
-  "name": "conductor-e2e",
+  "name": "@nouhouari/conductor-e2e",
   "version": "0.1.3",
   "description": "Multi-platform E2E test framework — web (Playwright), API, mobile (Maestro), desktop (JavaFX), and database in one Cucumber scenario",
   "keywords": [
@@ -73,5 +73,8 @@
     "@types/ws": "^8.18.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.4.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

@@ -48,10 +48,10 @@
     "esbuild": "^0.25.0"
   },
   "peerDependencies": {
-    "conductor-e2e": ">=0.1.0"
+    "@nouhouari/conductor-e2e": ">=0.1.0"
   },
   "peerDependenciesMeta": {
-    "conductor-e2e": {
+    "@nouhouari/conductor-e2e": {
       "optional": true
     }
   },

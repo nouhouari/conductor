@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [0.1.3] — 2026-06-19
 
+### Changed
+
+- **`conductor-e2e`**: Renamed package to `@nouhouari/conductor-e2e` and switched registry from npm to GitHub Packages. Update installs to `npm install @nouhouari/conductor-e2e` with `@nouhouari:registry=https://npm.pkg.github.com` in `.npmrc`.
+
 ### Added
 
 - **`FlutterDesktopDriver`** — new TypeScript driver that launches a Flutter macOS `.app` binary, connects to its Dart VM service via WebSocket, and issues `ext.flutter.driver` JSON-RPC commands. Public API: `launch()`, `close()`, `tap(finder)`, `enterText(finder, text)`, `getText(finder)`, `waitFor(finder)`, `waitForAbsent(finder)`, `requestData(message)`, `takeScreenshot(name)`.
