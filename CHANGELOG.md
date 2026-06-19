@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - **New exported types**: `OffsetType`, `Offset`, `WaitCondition`
 - **Example step definitions** for all new `FlutterDesktopDriver` methods
 
-## [conductor-mcp 0.1.3] — 2026-06-19
+## [conductor-mcp 0.1.4] — 2026-06-19
 
 ### Added
 
