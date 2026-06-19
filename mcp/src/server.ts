@@ -1,12 +1,15 @@
 /**
  * MCP server for conductor-e2e.
  *
- * Registers all 12 tools across three categories:
+ * Registers all 18 tools across four categories:
  * - Discovery (6): list_steps, list_page_objects, list_maestro_flows,
  *                  list_features, get_conductor_api, get_config
- * - Scaffolding (5): init_project, scaffold_feature, scaffold_step_def,
- *                    scaffold_page_object, scaffold_maestro_flow
+ * - Scaffolding (6): init_project, scaffold_feature, scaffold_step_def,
+ *                    scaffold_page_object, scaffold_maestro_flow, remove_samples
  * - Validation (1): dry_run_scenario
+ * - Desktop (5): explore_desktop_ui, take_desktop_screenshot,
+ *                query_desktop_elements, perform_desktop_action,
+ *                wait_for_desktop_element
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -33,8 +36,15 @@ import { removeSamples, removeSamplesInputSchema } from './tools/scaffolding/rem
 // Validation tools
 import { dryRunScenario, dryRunScenarioInputSchema } from './tools/validation/dry-run-scenario.js';
 
+// Desktop tools
+import { exploreUi, exploreUiInputSchema } from './tools/desktop/explore-ui.js';
+import { takeScreenshot, takeScreenshotInputSchema } from './tools/desktop/take-screenshot.js';
+import { queryElements, queryElementsInputSchema } from './tools/desktop/query-elements.js';
+import { performAction, performActionInputSchema } from './tools/desktop/perform-action.js';
+import { waitForElement, waitForElementInputSchema } from './tools/desktop/wait-for-element.js';
+
 /**
- * Creates and configures the MCP server with all 12 tools.
+ * Creates and configures the MCP server with all 18 tools.
  *
  * @param cwd - Working directory from which to resolve the project context.
  *              Defaults to process.cwd(). Set explicitly in tests.
@@ -395,6 +405,115 @@ export function createServer(cwd: string = process.cwd()): McpServer {
         return toTextContent(result);
       } catch (err) {
         return errorContent(`dry_run_scenario failed: ${String(err)}`);
+      }
+    },
+  );
+
+  // ─────────────────────────────────────────────────────────
+  // DESKTOP TOOLS (JavaFX live introspection via fxagent)
+  // ─────────────────────────────────────────────────────────
+
+  server.registerTool(
+    'explore_desktop_ui',
+    {
+      title: 'Explore Desktop UI (JavaFX)',
+      description:
+        'Get the live scene graph tree from a running JavaFX application instrumented with fxagent. ' +
+        'Returns an indented text tree showing element types, IDs (#id), CSS classes (.class), ' +
+        'text content, visibility, and screen bounds. ' +
+        'Optionally scope to a subtree using a selector (e.g. "#main-panel"). ' +
+        'The app must be started with -javaagent:fxagent.jar (default port 4567). ' +
+        'Use this before writing Cucumber scenarios to understand the real UI structure.',
+      inputSchema: exploreUiInputSchema,
+    },
+    async (input) => {
+      try {
+        return await exploreUi(input);
+      } catch (err) {
+        return errorContent(`explore_desktop_ui failed: ${String(err)}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    'take_desktop_screenshot',
+    {
+      title: 'Take Desktop Screenshot (JavaFX)',
+      description:
+        'Capture a screenshot of a running JavaFX application. ' +
+        'Returns the full window by default, or a specific element when selector is given. ' +
+        'Without savePath, returns an inline PNG image for the AI to inspect visually. ' +
+        'With savePath, saves to disk and returns the file path. ' +
+        'The app must be started with -javaagent:fxagent.jar.',
+      inputSchema: takeScreenshotInputSchema,
+    },
+    async (input) => {
+      try {
+        return await takeScreenshot(input);
+      } catch (err) {
+        return errorContent(`take_desktop_screenshot failed: ${String(err)}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    'query_desktop_elements',
+    {
+      title: 'Query Desktop Elements (JavaFX)',
+      description:
+        'Find elements in a running JavaFX app that match a selector. ' +
+        'Selector syntax: #id, .styleClass, text=exact, text~=partial, TypeName (e.g. Button), ' +
+        'css=selector, ref=<handle>. Chain with >>. ' +
+        'Returns element handles, types, IDs, text, style classes, bounds, visibility, and enabled state. ' +
+        'Handles from this tool can be reused in perform_desktop_action and wait_for_desktop_element.',
+      inputSchema: queryElementsInputSchema,
+    },
+    async (input) => {
+      try {
+        return await queryElements(input);
+      } catch (err) {
+        return errorContent(`query_desktop_elements failed: ${String(err)}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    'perform_desktop_action',
+    {
+      title: 'Perform Desktop Action (JavaFX)',
+      description:
+        'Execute an action on an element in a running JavaFX application. ' +
+        'Actions: click, dblclick, rightclick, hover, fill, clear, select, focus, scroll, setText. ' +
+        'fill/select/setText require a "value". ' +
+        'Returns success/failure with element confirmation. ' +
+        'Use explore_desktop_ui or query_desktop_elements first to discover the selector.',
+      inputSchema: performActionInputSchema,
+    },
+    async (input) => {
+      try {
+        return await performAction(input);
+      } catch (err) {
+        return errorContent(`perform_desktop_action failed: ${String(err)}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    'wait_for_desktop_element',
+    {
+      title: 'Wait For Desktop Element (JavaFX)',
+      description:
+        'Wait until a JavaFX UI element reaches a specified state: ' +
+        '"exists" (appears in scene), "visible", "enabled", or "hidden". ' +
+        'Useful after actions that trigger async UI changes (dialogs, loading spinners, navigation). ' +
+        'Returns element info when the condition is met, or a timeout error after timeoutMs.',
+      inputSchema: waitForElementInputSchema,
+    },
+    async (input) => {
+      try {
+        return await waitForElement(input);
+      } catch (err) {
+        return errorContent(`wait_for_desktop_element failed: ${String(err)}`);
       }
     },
   );

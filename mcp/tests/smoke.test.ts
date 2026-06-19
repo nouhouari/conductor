@@ -236,9 +236,9 @@ describe('Mode 1: existing-project mode (cwd = example/)', { timeout: 60_000 }, 
 
   // ── tools/list ─────────────────────────────────────────────────────────────
 
-  it('tools/list returns exactly 12 tools', async () => {
+  it('tools/list returns exactly 18 tools', async () => {
     const tools = await client.listTools();
-    assert.equal(tools.length, 13, `Expected 13 tools, got ${tools.length}: ${tools.map((t) => t.name).join(', ')}`);
+    assert.equal(tools.length, 18, `Expected 18 tools, got ${tools.length}: ${tools.map((t) => t.name).join(', ')}`);
   });
 
   it('tools/list contains all expected tool names', async () => {
@@ -249,6 +249,8 @@ describe('Mode 1: existing-project mode (cwd = example/)', { timeout: 60_000 }, 
       'get_conductor_api', 'get_config',
       'init_project', 'scaffold_feature', 'scaffold_step_def', 'scaffold_page_object',
       'scaffold_maestro_flow', 'remove_samples', 'dry_run_scenario',
+      'explore_desktop_ui', 'take_desktop_screenshot', 'query_desktop_elements',
+      'perform_desktop_action', 'wait_for_desktop_element',
     ];
     for (const name of expected) {
       assert.ok(names.has(name), `Missing tool: ${name}`);
