@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [conductor-mcp 0.1.2] — 2026-06-19
+
+### Changed
+
+- **`@nouhouari/conductor-mcp`**: Renamed package from `conductor-mcp` to `@nouhouari/conductor-mcp` and switched registry from npm to GitHub Packages. Consumers should update their install command to `npm install @nouhouari/conductor-mcp` and configure `@nouhouari:registry=https://npm.pkg.github.com` in their `.npmrc`.
+
 ## [0.1.3] — 2026-06-19
 
 ### Added
