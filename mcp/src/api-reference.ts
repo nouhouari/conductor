@@ -238,9 +238,10 @@ Finder types: \`'ByValueKey'\` (widget key), \`'ByText'\` (Text widget content),
 
 | Method | Signature | Description |
 |---|---|---|
-| \`launch\` | \`(): Promise<void>\` | Spawn the app and connect to the Dart VM service. |
-| \`close\` | \`(): Promise<void>\` | Terminate the app and close the WebSocket. |
-| \`isLaunched\` | \`boolean\` | Whether the driver is currently connected. |
+| \`launch\` | \`(): Promise<void>\` | Spawn the app and connect to the Dart VM service. Use for macOS/Windows/Linux desktop. |
+| \`connect\` | \`(vmServiceUrl: string, timeoutMs?): Promise<void>\` | Connect to an already-running Flutter app via its VM service URL. Use for mobile (after \`adb forward\` / \`iproxy\`) or externally-managed desktop processes. Accepts HTTP (\`http://localhost:PORT/TOKEN/\`) or WS form. |
+| \`close\` | \`(): Promise<void>\` | Close the WebSocket and terminate the spawned process (if any). |
+| \`isLaunched\` | \`boolean\` | Whether the driver is currently connected (true after \`launch()\` or \`connect()\`). |
 
 ### Gesture & interaction methods
 
