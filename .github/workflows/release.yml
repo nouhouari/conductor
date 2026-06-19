@@ -6,9 +6,35 @@ on:
       - 'v*'
 
 jobs:
+  test:
+    name: Pre-release tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Dry-run example scenarios
+        run: npm run test:dry-run -w example
+
+      - name: MCP smoke tests
+        run: npm test -w mcp
+
   release:
     name: Build, GitHub Release & publish to GitHub Packages
     runs-on: ubuntu-latest
+    needs: test
     permissions:
       contents: write
       packages: write

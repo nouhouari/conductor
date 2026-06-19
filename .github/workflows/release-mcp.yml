@@ -8,9 +8,32 @@ on:
       - 'mcp-v*'
 
 jobs:
+  test:
+    name: Pre-release tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (root + workspaces)
+        run: npm ci
+
+      - name: Build (conductor-mcp)
+        run: npm run build -w mcp
+
+      - name: MCP smoke tests
+        run: npm test -w mcp
+
   release-mcp:
     name: Build, GitHub Release & GitHub Packages publish (conductor-mcp)
     runs-on: ubuntu-latest
+    needs: test
     permissions:
       contents: write   # create GitHub Release + upload asset
       packages: write   # publish to GitHub Packages
