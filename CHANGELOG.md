@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   - `getOffset(finder, offsetType?, timeoutMs?)` → `{ dx, dy }` — get widget screen coordinates (`get_offset` command); `offsetType`: `'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' | 'center'`
   - `waitForCondition(condition, timeoutMs?)` — wait for the app to reach a quiescent state, the Flutter equivalent of `page.waitForLoadState()`; conditions: `'NoPendingFrames'`, `'NoTransientCallbacks'`, `'FirstFrameRasterized'`
   - `setFrameSync(enabled, timeoutMs?)` — pause/resume Flutter's frame-sync during heavy animations, mirrors disabling CSS transitions in web tests
+- **`FlutterDesktopDriver.connect(vmServiceUrl, timeoutMs?)`** — connect to an already-running Flutter app via its Dart VM service URL, without spawning a process. Enables use on Android (after `adb forward`), iOS (after `iproxy`), and Windows/Linux desktop. Accepts both HTTP (`http://localhost:PORT/TOKEN/`) and WebSocket (`ws://localhost:PORT/TOKEN/ws`) form. `isLaunched` now returns `true` after `connect()` as well as `launch()`.
 - **New exported types**: `OffsetType`, `Offset`, `WaitCondition`
 - **Example step definitions** for all new `FlutterDesktopDriver` methods
 
@@ -27,7 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- **`@nouhouari/conductor-mcp`**: Added `flutter` API surface to the built-in reference (`get_api_reference`, `list_steps` surface filter). Documents the full `FlutterDesktopDriver` public API — lifecycle, finders, gesture/interaction methods (`tap`, `doubleTap`, `longPress`, `enterText`, `clearText`, `scroll`, `scrollIntoView`), query methods (`getText`, `getOffset`, `isVisible`), wait methods (`waitFor`, `waitForAbsent`, `waitForCondition`), and advanced utilities (`requestData`, `setFrameSync`, `takeScreenshot`). Also documents the `@flutter-desktop` tag hook and `FlutterDesktopConfig`. Updated the `world` surface to include the `flutterDesktop` and `isFlutterDesktopLaunched` getters.
+- **`@nouhouari/conductor-mcp`**: Added `flutter` API surface to the built-in reference (`get_api_reference`, `list_steps` surface filter). Documents the full `FlutterDesktopDriver` public API — lifecycle (`launch`, `connect`, `close`), finders, gesture/interaction methods (`tap`, `doubleTap`, `longPress`, `enterText`, `clearText`, `scroll`, `scrollIntoView`), query methods (`getText`, `getOffset`, `isVisible`), wait methods (`waitFor`, `waitForAbsent`, `waitForCondition`), and advanced utilities (`requestData`, `setFrameSync`, `takeScreenshot`). Also documents the `@flutter-desktop` tag hook and `FlutterDesktopConfig`. Updated the `world` surface to include the `flutterDesktop` and `isFlutterDesktopLaunched` getters.
 
 ## [conductor-mcp 0.1.2] — 2026-06-19
 
