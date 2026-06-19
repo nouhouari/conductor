@@ -698,13 +698,19 @@ describe('Mode 2: end-to-end bootstrap prove-out (npm install + dry-run)', { tim
 
     assert.ok(!isError, `init_project failed: ${JSON.stringify(data)}`);
 
-    // Patch the generated package.json to install @nouhouari/conductor-e2e from
-    // the local monorepo root via file: — avoids needing GitHub Packages auth in CI.
+    // Pack conductor-e2e as a tarball and install from it. A file: symlink to the
+    // monorepo root causes a duplicate @cucumber/cucumber instance because hooks
+    // resolve the package from REPO_ROOT/node_modules instead of the bootstrapped
+    // project's own node_modules, triggering "setWorldConstructor on PENDING instance".
+    // Installing from a tarball unpacks the package normally, avoiding that problem.
+    const packOutput = execSync('npm pack --json', { cwd: REPO_ROOT, encoding: 'utf8' });
+    const [{ filename: tarball }] = JSON.parse(packOutput) as Array<{ filename: string }>;
+    const tarballPath = path.join(REPO_ROOT, tarball);
+
     const pkgPath = path.join(bootstrapDir, 'package.json');
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-    const localRoot = REPO_ROOT;
     pkg.dependencies ??= {};
-    pkg.dependencies['@nouhouari/conductor-e2e'] = `file:${localRoot}`;
+    pkg.dependencies['@nouhouari/conductor-e2e'] = `file:${tarballPath}`;
     await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2));
   });
 
