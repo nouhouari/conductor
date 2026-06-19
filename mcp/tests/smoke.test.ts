@@ -702,7 +702,7 @@ describe('Mode 2: end-to-end bootstrap prove-out (npm install + dry-run)', { tim
     // the local monorepo root via file: — avoids needing GitHub Packages auth in CI.
     const pkgPath = path.join(bootstrapDir, 'package.json');
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-    const localRoot = path.resolve(__dirname, '../..');
+    const localRoot = REPO_ROOT;
     pkg.dependencies ??= {};
     pkg.dependencies['@nouhouari/conductor-e2e'] = `file:${localRoot}`;
     await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2));
