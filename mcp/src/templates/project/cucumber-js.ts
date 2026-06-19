@@ -54,11 +54,11 @@ export function renderCucumberJs(platforms: readonly string[]): string {
 
   return `const path = require('path');
 
-// Resolve the conductor-e2e hooks file. We resolve the package main entry
+// Resolve the @nouhouari/conductor-e2e hooks file. We resolve the package main entry
 // and derive the hooks path from it so that the hooks share the same
 // @cucumber/cucumber instance as the runner — required for World hooks.
 // This avoids relying on package subpath exports which may not be declared.
-const conductorMain = require.resolve('conductor-e2e');
+const conductorMain = require.resolve('@nouhouari/conductor-e2e');
 const conductorHooks = conductorMain.replace(/[\\/]dist[\\/]src[\\/]index\.js$/, path.sep + path.join('dist', 'src', 'hooks', 'index.js'));
 
 const common = {

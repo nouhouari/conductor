@@ -42,7 +42,7 @@ export function renderPackageJson(options: PackageJsonOptions): string {
     dependencies: {
       '@cucumber/cucumber': '^11.0.0',
       'allure-cucumberjs': '^3.0.0',
-      'conductor-e2e': '^0.1.1',
+      '@nouhouari/conductor-e2e': '^0.1.3',
       'ts-node': '^10.9.0',
       'tsconfig-paths': '^4.2.0',
       typescript: '^5.4.0',

@@ -572,13 +572,13 @@ describe('Mode 2: bootstrap mode (cwd = fresh tmp dir)', { timeout: 10_000 }, ()
     assert.ok(data.nextSteps.length > 0, 'nextSteps must be non-empty');
   });
 
-  it('init_project wrote package.json with conductor-e2e dependency', async () => {
+  it('init_project wrote package.json with @nouhouari/conductor-e2e dependency', async () => {
     const pkgPath = path.join(tmpDir, 'package.json');
     const content = await fs.readFile(pkgPath, 'utf8');
     const pkg = JSON.parse(content) as { dependencies?: Record<string, string> };
     assert.ok(
-      pkg.dependencies?.['conductor-e2e'],
-      `conductor-e2e not found in dependencies: ${JSON.stringify(pkg.dependencies)}`,
+      pkg.dependencies?.['@nouhouari/conductor-e2e'],
+      `@nouhouari/conductor-e2e not found in dependencies: ${JSON.stringify(pkg.dependencies)}`,
     );
   });
 
@@ -596,10 +596,10 @@ describe('Mode 2: bootstrap mode (cwd = fresh tmp dir)', { timeout: 10_000 }, ()
     const stat = await fs.stat(filePath);
     assert.ok(stat.isFile(), 'cucumber.js should exist');
     const content = await fs.readFile(filePath, 'utf8');
-    // Must reference conductor-e2e hooks
+    // Must reference @nouhouari/conductor-e2e hooks
     assert.ok(
-      content.includes('conductor-e2e'),
-      `cucumber.js must reference conductor-e2e. Got:\n${content}`,
+      content.includes('@nouhouari/conductor-e2e'),
+      `cucumber.js must reference @nouhouari/conductor-e2e. Got:\n${content}`,
     );
   });
 
@@ -697,6 +697,21 @@ describe('Mode 2: end-to-end bootstrap prove-out (npm install + dry-run)', { tim
     await client.close();
 
     assert.ok(!isError, `init_project failed: ${JSON.stringify(data)}`);
+
+    // Pack conductor-e2e as a tarball and install from it. A file: symlink to the
+    // monorepo root causes a duplicate @cucumber/cucumber instance because hooks
+    // resolve the package from REPO_ROOT/node_modules instead of the bootstrapped
+    // project's own node_modules, triggering "setWorldConstructor on PENDING instance".
+    // Installing from a tarball unpacks the package normally, avoiding that problem.
+    const packOutput = execSync('npm pack --json', { cwd: REPO_ROOT, encoding: 'utf8' });
+    const [{ filename: tarball }] = JSON.parse(packOutput) as Array<{ filename: string }>;
+    const tarballPath = path.join(REPO_ROOT, tarball);
+
+    const pkgPath = path.join(bootstrapDir, 'package.json');
+    const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+    pkg.dependencies ??= {};
+    pkg.dependencies['@nouhouari/conductor-e2e'] = `file:${tarballPath}`;
+    await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2));
   });
 
   after(async () => {
@@ -750,11 +765,11 @@ describe('Mode 2: end-to-end bootstrap prove-out (npm install + dry-run)', { tim
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Drift check: cucumber.js template vs USER_GUIDE.md §2', { timeout: 10_000 }, () => {
-  it('cucumber.js template in USER_GUIDE.md §2 loads conductor-e2e hooks', async () => {
+  it('cucumber.js template in USER_GUIDE.md §2 loads @nouhouari/conductor-e2e hooks', async () => {
     // We extract the cucumber.js code block from the USER_GUIDE rather than
     // doing a byte-exact diff (the MCP template adds platform profiles while
     // the guide shows a minimal single-profile snippet). The key invariant is
-    // that BOTH reference conductor-e2e's hooks — not a local path that would
+    // that BOTH reference @nouhouari/conductor-e2e's hooks — not a local path that would
     // break in a standalone project.
 
     const guideContent = await fs.readFile(USER_GUIDE, 'utf8');
@@ -766,21 +781,21 @@ describe('Drift check: cucumber.js template vs USER_GUIDE.md §2', { timeout: 10
     const guideSnippet = sectionMatch[1]!.trim();
     assert.ok(guideSnippet.length > 0, 'cucumber.js snippet in USER_GUIDE is empty');
 
-    // Both must reference conductor-e2e for hooks resolution
+    // Both must reference @nouhouari/conductor-e2e for hooks resolution
     assert.ok(
-      guideSnippet.includes('conductor-e2e'),
+      guideSnippet.includes('@nouhouari/conductor-e2e') || guideSnippet.includes('conductor-e2e'),
       `USER_GUIDE cucumber.js snippet must reference conductor-e2e.\nGot:\n${guideSnippet}`,
     );
   });
 
-  it('MCP init_project cucumber.js template references conductor-e2e hooks', async () => {
+  it('MCP init_project cucumber.js template references @nouhouari/conductor-e2e hooks', async () => {
     const templatePath = path.join(REPO_ROOT, 'mcp', 'src', 'templates', 'project', 'cucumber-js.ts');
     const content = await fs.readFile(templatePath, 'utf8');
 
-    // The renderCucumberJs function source must contain conductor-e2e
+    // The renderCucumberJs function source must contain @nouhouari/conductor-e2e
     assert.ok(
-      content.includes('conductor-e2e'),
-      `cucumber-js.ts template must reference conductor-e2e.\nGot:\n${content}`,
+      content.includes('@nouhouari/conductor-e2e'),
+      `cucumber-js.ts template must reference @nouhouari/conductor-e2e.\nGot:\n${content}`,
     );
   });
 
@@ -801,7 +816,7 @@ describe('Drift check: cucumber.js template vs USER_GUIDE.md §2', { timeout: 10
     // MCP template must also use require.resolve
     assert.ok(
       templateContent.includes('require.resolve'),
-      `MCP template should use require.resolve for conductor-e2e hooks`,
+      `MCP template should use require.resolve for @nouhouari/conductor-e2e hooks`,
     );
   });
 
@@ -814,10 +829,12 @@ describe('Drift check: cucumber.js template vs USER_GUIDE.md §2', { timeout: 10
     assert.ok(sectionMatch);
     const guideSnippet = normaliseWhitespace(sectionMatch[1]!);
 
-    // Both should reference conductor-e2e/dist/src/hooks/index (or a close variant)
-    const guideHasHooksRef = guideSnippet.includes('conductor-e2e/dist/src/hooks/index') ||
+    // Both should reference @nouhouari/conductor-e2e/dist/src/hooks/index (or a close variant)
+    const guideHasHooksRef = guideSnippet.includes('@nouhouari/conductor-e2e/dist/src/hooks/index') ||
+      guideSnippet.includes('conductor-e2e/dist/src/hooks/index') ||
       guideSnippet.includes("conductor-e2e");
     const templateHasHooksRef = templateContent.includes('dist/src/hooks/index') ||
+      templateContent.includes('@nouhouari/conductor-e2e') ||
       templateContent.includes('conductor-e2e');
 
     assert.ok(guideHasHooksRef, `USER_GUIDE snippet does not reference hooks. Snippet:\n${guideSnippet}`);

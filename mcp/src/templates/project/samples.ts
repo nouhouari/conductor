@@ -25,7 +25,7 @@ Feature: Example web test
     {
       relativePath: 'step-definitions/web.steps.ts',
       content: `import { Given, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor-e2e';
+import { ConductorWorld } from '@nouhouari/conductor-e2e';
 
 Given('I navigate to the home page', async function (this: ConductorWorld) {
   await this.page.goto(this.config.web.baseUrl);
@@ -41,7 +41,7 @@ Then('I should see the page title', async function (this: ConductorWorld) {
     },
     {
       relativePath: 'pages/ExamplePage.ts',
-      content: `import { BasePage } from 'conductor-e2e';
+      content: `import { BasePage } from '@nouhouari/conductor-e2e';
 
 export class ExamplePage extends BasePage {
   async open(): Promise<void> {
@@ -73,7 +73,7 @@ Feature: Example API test
     {
       relativePath: 'step-definitions/api.steps.ts',
       content: `import { Given, When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor-e2e';
+import { ConductorWorld } from '@nouhouari/conductor-e2e';
 
 Given('the API is reachable', async function (this: ConductorWorld) {
   if (!this.api.isInitialized) await this.api.init();
@@ -128,7 +128,7 @@ Feature: Example mobile test
     {
       relativePath: 'step-definitions/mobile.steps.ts',
       content: `import { When, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor-e2e';
+import { ConductorWorld } from '@nouhouari/conductor-e2e';
 
 const MOBILE_TIMEOUT = { timeout: 120000 };
 
@@ -176,7 +176,7 @@ Feature: Example desktop test
     {
       relativePath: 'step-definitions/desktop.steps.ts',
       content: `import { Given, Then } from '@cucumber/cucumber';
-import { ConductorWorld } from 'conductor-e2e';
+import { ConductorWorld } from '@nouhouari/conductor-e2e';
 import * as path from 'path';
 
 const DESKTOP_TIMEOUT = { timeout: 60000 };

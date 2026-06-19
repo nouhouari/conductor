@@ -14,12 +14,12 @@ const REFERENCES: Record<ApiSurface, string> = {
 
 The Cucumber \`World\` subclass that wires all drivers together. Import with:
 \`\`\`typescript
-import { ConductorWorld } from 'conductor-e2e';
+import { ConductorWorld } from '@nouhouari/conductor-e2e';
 \`\`\`
 
 Activated by tag hooks in \`src/hooks/index.ts\` — loaded via:
 \`\`\`js
-require.resolve('conductor-e2e/dist/src/hooks/index')
+require.resolve('@nouhouari/conductor-e2e/dist/src/hooks/index')
 \`\`\`
 
 ### Properties
@@ -297,7 +297,7 @@ Before({ tags: '@database' }, async function (this: ConductorWorld) {
 Abstract base class for page objects. Extend this in \`pages/\`.
 
 \`\`\`typescript
-import { BasePage } from 'conductor-e2e';
+import { BasePage } from '@nouhouari/conductor-e2e';
 import type { Locator } from 'playwright';
 
 export class LoginPage extends BasePage {
