@@ -23,6 +23,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - **New exported types**: `OffsetType`, `Offset`, `WaitCondition`
 - **Example step definitions** for all new `FlutterDesktopDriver` methods
 
+## [conductor-mcp 0.1.3] — 2026-06-19
+
+### Added
+
+- **`@nouhouari/conductor-mcp`**: Added `flutter` API surface to the built-in reference (`get_api_reference`, `list_steps` surface filter). Documents the full `FlutterDesktopDriver` public API — lifecycle, finders, gesture/interaction methods (`tap`, `doubleTap`, `longPress`, `enterText`, `clearText`, `scroll`, `scrollIntoView`), query methods (`getText`, `getOffset`, `isVisible`), wait methods (`waitFor`, `waitForAbsent`, `waitForCondition`), and advanced utilities (`requestData`, `setFrameSync`, `takeScreenshot`). Also documents the `@flutter-desktop` tag hook and `FlutterDesktopConfig`. Updated the `world` surface to include the `flutterDesktop` and `isFlutterDesktopLaunched` getters.
+
 ## [conductor-mcp 0.1.2] — 2026-06-19
 
 ### Changed
