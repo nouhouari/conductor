@@ -17,6 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   - Example: new `remote` cucumber profile and `fetch:remote` / `test:remote` / `test:remote:dry` scripts.
 - **New exported types**: `RemoteScenariosConfig`, `RemoteScenariosFilters`, `RemoteScenarioSummary`, `ReconstructResult`
 
+## [conductor-mcp 0.1.6] — 2026-06-21
+
+### Added
+
+- **`init_project` scaffolds the remote scenario mode (opt-in)** — newly bootstrapped projects now include the `remote` cucumber profile, the `fetch:remote` / `test:remote` / `test:remote:dry` scripts, a commented `REMOTE_SCENARIOS_*` section in `.env.example`, `.remote-features/` in `.gitignore`, and a "Remote Scenarios" section in the README. Local feature files remain the default; the remote profile is inert until `npm run test:remote` is run. No new init parameter or prompt.
+- Bootstrapped projects now depend on `@nouhouari/conductor-e2e@^0.1.6` (provides the `conductor-fetch-features` bin used by `fetch:remote`).
+
 ## [0.1.5] — 2026-06-19
 
 ### Added

@@ -34,6 +34,12 @@ export function renderPackageJson(options: PackageJsonOptions): string {
     scripts['test:cross'] = 'cucumber-js --profile cross-platform';
   }
 
+  // Opt-in remote scenario sourcing (requ scenario API). Inert unless invoked;
+  // local features remain the default. Configure via REMOTE_SCENARIOS_* env vars.
+  scripts['fetch:remote'] = 'conductor-fetch-features';
+  scripts['test:remote'] = 'npm run fetch:remote && cucumber-js --profile remote';
+  scripts['test:remote:dry'] = 'npm run fetch:remote && cucumber-js --profile remote --dry-run';
+
   const pkg = {
     name,
     version: '0.1.0',
@@ -42,7 +48,7 @@ export function renderPackageJson(options: PackageJsonOptions): string {
     dependencies: {
       '@cucumber/cucumber': '^11.0.0',
       'allure-cucumberjs': '^3.0.0',
-      '@nouhouari/conductor-e2e': '^0.1.5',
+      '@nouhouari/conductor-e2e': '^0.1.6',
       'ts-node': '^10.9.0',
       'tsconfig-paths': '^4.2.0',
       typescript: '^5.4.0',

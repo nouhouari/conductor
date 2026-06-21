@@ -14,6 +14,9 @@ reports/
 allure-results/
 allure-report/
 
+# Scenarios fetched from the requ scenario API (npm run fetch:remote)
+.remote-features/
+
 # Environment secrets
 .env
 
