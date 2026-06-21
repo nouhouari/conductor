@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.1.6] — 2026-06-21
+
+### Added
+
+- **Remote scenario sourcing** — opt-in mode to run Cucumber scenarios fetched from the requ scenario API (`GET /api/scenarios`) instead of the local `features/` folder. The local filesystem flow is unchanged and remains the default.
+  - `fetchScenarios()` / `reconstructFeatureFiles()` (exported from `src/scenarios/RemoteScenarioFetcher.ts`) — fetch scenarios with server-side filters (`project`, `story`, `requirement`, `phase`, `mode`, `tags`, `feature`, `q`, `valid`) and reconstruct them into `.feature` files grouped by feature, recovering feature-level tags, inserting `Background:`, and preserving `Examples:`.
+  - `conductor-fetch-features` bin (`src/scenarios/cli.ts`) — prefetch step that writes the reconstructed features to disk.
+  - New optional `remoteScenarios` config block with `REMOTE_SCENARIOS_*` env-var overrides.
+  - Example: new `remote` cucumber profile and `fetch:remote` / `test:remote` / `test:remote:dry` scripts.
+- **New exported types**: `RemoteScenariosConfig`, `RemoteScenariosFilters`, `RemoteScenarioSummary`, `ReconstructResult`
+
 ## [0.1.5] — 2026-06-19
 
 ### Added
