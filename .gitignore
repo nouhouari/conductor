@@ -17,6 +17,10 @@ example/*.png
 .env
 *.log
 
+# Scenarios fetched & reconstructed from the requ scenario API
+.remote-features/
+**/.remote-features/
+
 # OS / editor
 .DS_Store
 Thumbs.db

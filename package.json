@@ -30,6 +30,9 @@
   ],
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "bin": {
+    "conductor-fetch-features": "dist/src/scenarios/cli.js"
+  },
   "files": [
     "dist",
     "config",

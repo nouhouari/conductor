@@ -32,5 +32,10 @@ export const defaultConfig: EnvironmentConfig = {
     defaultTimeoutMs: 10000,
     launchTimeoutMs: 30000,
     screenshotDir: 'reports/screenshots'
+  },
+  remoteScenarios: {
+    baseUrl: 'http://localhost:8788/api',
+    outputDir: '.remote-features',
+    filters: {}
   }
 };
