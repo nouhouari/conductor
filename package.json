@@ -1,6 +1,6 @@
 {
   "name": "@nouhouari/conductor-e2e",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Multi-platform E2E test framework — web (Playwright), API, mobile (Maestro), desktop (JavaFX), and database in one Cucumber scenario",
   "keywords": [
     "e2e",
@@ -30,6 +30,9 @@
   ],
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "bin": {
+    "conductor-fetch-features": "dist/src/scenarios/cli.js"
+  },
   "files": [
     "dist",
     "config",

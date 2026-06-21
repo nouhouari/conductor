@@ -39,5 +39,11 @@ module.exports = {
     ...common,
     paths: ['features/flutter-desktop/**/*.feature'],
     tags: '@flutter-desktop'
+  },
+  // Runs scenarios reconstructed from the requ scenario API (see `npm run fetch:remote`).
+  // No fixed tags: filtering happens server-side; a local `--tags` expression still works.
+  remote: {
+    ...common,
+    paths: [`${process.env.REMOTE_SCENARIOS_OUTPUT_DIR || '.remote-features'}/**/*.feature`]
   }
 };

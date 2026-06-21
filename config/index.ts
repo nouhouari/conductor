@@ -31,6 +31,24 @@ function loadConfig(): EnvironmentConfig {
     base.flutterDesktop.vmServicePort = Number(process.env.FLUTTER_DESKTOP_VM_PORT);
   }
 
+  if (base.remoteScenarios) {
+    const rs = base.remoteScenarios;
+    if (process.env.REMOTE_SCENARIOS_URL) rs.baseUrl = process.env.REMOTE_SCENARIOS_URL;
+    if (process.env.REMOTE_SCENARIOS_PROJECT) rs.project = process.env.REMOTE_SCENARIOS_PROJECT;
+    if (process.env.REMOTE_SCENARIOS_OUTPUT_DIR) rs.outputDir = process.env.REMOTE_SCENARIOS_OUTPUT_DIR;
+    rs.filters = rs.filters ?? {};
+    if (process.env.REMOTE_SCENARIOS_STORY) rs.filters.story = process.env.REMOTE_SCENARIOS_STORY;
+    if (process.env.REMOTE_SCENARIOS_REQUIREMENT) rs.filters.requirement = process.env.REMOTE_SCENARIOS_REQUIREMENT;
+    if (process.env.REMOTE_SCENARIOS_PHASE) rs.filters.phase = process.env.REMOTE_SCENARIOS_PHASE;
+    if (process.env.REMOTE_SCENARIOS_MODE) {
+      rs.filters.mode = process.env.REMOTE_SCENARIOS_MODE as 'cumulative' | 'strict';
+    }
+    if (process.env.REMOTE_SCENARIOS_TAGS) rs.filters.tags = process.env.REMOTE_SCENARIOS_TAGS;
+    if (process.env.REMOTE_SCENARIOS_FEATURE) rs.filters.feature = process.env.REMOTE_SCENARIOS_FEATURE;
+    if (process.env.REMOTE_SCENARIOS_Q) rs.filters.q = process.env.REMOTE_SCENARIOS_Q;
+    if (process.env.REMOTE_SCENARIOS_VALID) rs.filters.valid = process.env.REMOTE_SCENARIOS_VALID === 'true';
+  }
+
   return base;
 }
 

@@ -49,6 +49,16 @@ export function renderCucumberJs(platforms: readonly string[]): string {
   },`);
   }
 
+  // Always include the opt-in 'remote' profile: runs scenarios fetched from the
+  // requ scenario API (see the fetch:remote script). Local features stay the
+  // default; this profile is inert until `npm run test:remote` is invoked.
+  profiles.push(`  // Scenarios fetched from the requ scenario API. Opt-in: run with \`npm run test:remote\`.
+  // No fixed tags — filtering is server-side; a local --tags expression still works.
+  remote: {
+    ...common,
+    paths: [\`\${process.env.REMOTE_SCENARIOS_OUTPUT_DIR || '.remote-features'}/**/*.feature\`],
+  },`);
+
   const profileBlock =
     profiles.length > 0 ? `\n${profiles.join('\n')}\n` : '';
 

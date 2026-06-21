@@ -43,6 +43,22 @@ npx playwright install chromium
 
 ${runCommands.join('\n')}
 
+## Remote Scenarios (optional)
+
+By default, scenarios come from local \`.feature\` files. You can optionally source them
+from a [requ](https://github.com/nouhouari/requ-mcp) scenario API instead — local files
+remain the default and are unaffected.
+
+\`\`\`bash
+npm run fetch:remote      # fetch scenarios from the API into .remote-features/
+npm run test:remote       # fetch + run
+npm run test:remote:dry   # fetch + dry-run (validate steps)
+\`\`\`
+
+Configure the source via \`REMOTE_SCENARIOS_*\` env vars (see \`.env.example\`), e.g.
+\`REMOTE_SCENARIOS_URL\`, \`REMOTE_SCENARIOS_PROJECT\`, \`REMOTE_SCENARIOS_STORY\`,
+\`REMOTE_SCENARIOS_PHASE\`, \`REMOTE_SCENARIOS_TAGS\`.
+
 ## Reports
 
 \`\`\`bash

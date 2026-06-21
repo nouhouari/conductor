@@ -23,5 +23,8 @@ export { createLogger } from './support/logger';
 export { retry } from './support/retry';
 export type { RetryOptions } from './support/retry';
 
+export { fetchScenarios, reconstructFeatureFiles } from './scenarios/RemoteScenarioFetcher';
+export type { RemoteScenarioSummary, ReconstructResult } from './scenarios/RemoteScenarioFetcher';
+
 export { config, loadConfig } from '../config';
-export type { EnvironmentConfig, WebConfig, ApiConfig, MobileConfig, DatabaseConfig, DesktopConfig, FlutterDesktopConfig } from '../config/types';
+export type { EnvironmentConfig, WebConfig, ApiConfig, MobileConfig, DatabaseConfig, DesktopConfig, FlutterDesktopConfig, RemoteScenariosConfig, RemoteScenariosFilters } from '../config/types';

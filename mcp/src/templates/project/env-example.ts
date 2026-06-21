@@ -52,5 +52,17 @@ export function renderEnvExample(
     );
   }
 
+  lines.push(
+    '# Remote scenarios (opt-in) — source scenarios from the requ scenario API instead of',
+    '# local feature files. Used only by `npm run test:remote`; local features stay the default.',
+    '# REMOTE_SCENARIOS_URL=http://localhost:8788/api',
+    '# REMOTE_SCENARIOS_PROJECT=my-project',
+    '# REMOTE_SCENARIOS_STORY=US-007',
+    '# REMOTE_SCENARIOS_PHASE=P1',
+    '# REMOTE_SCENARIOS_TAGS=@smoke and not @wip',
+    '# REMOTE_SCENARIOS_OUTPUT_DIR=.remote-features',
+    '',
+  );
+
   return lines.join('\n');
 }
