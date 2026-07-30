@@ -115,3 +115,48 @@ side apply: `WEB_BASE_URL`, `API_BASE_URL`, `HEADLESS`, `BROWSER`,
 `MAESTRO_DEVICE`, `FLUTTER_DESKTOP_APP_PATH`, `FLUTTER_DESKTOP_VM_PORT`, plus
 `TEST_ENV` itself (readable as either a system property `-DTEST_ENV=dev` or an
 env var).
+
+## CI & Releasing
+
+`.github/workflows/ci.yml` has a dedicated `java` job (temurin JDK 21, sources
+compile to release 17). On every push/PR to `main` it:
+
+1. `mvn -pl conductor-core -am install` — builds and unit-tests the library.
+2. `mvn -pl conductor-example -am test-compile` — catches API drift in the step
+   definitions and page objects.
+3. Cucumber CLI `--dry-run` over `../../example/features` with the real glue —
+   fails on undefined or ambiguous steps.
+
+`conductor-example`'s suites drive real browsers, devices and a Postgres
+server, so they are never executed on a hosted runner — only compiled and
+dry-run.
+
+### Cutting a release
+
+`.github/workflows/release-java.yml` fires on `java-v*` tags. It refuses to
+release a `-SNAPSHOT` and requires the tag to match `java/pom.xml`, so set the
+version first:
+
+```bash
+cd java
+mvn -B versions:set -DnewVersion=0.1.0 -DgenerateBackupPoms=false
+git commit -am "chore(release): conductor-java 0.1.0"
+git tag java-v0.1.0 && git push --follow-tags
+```
+
+The workflow then builds `conductor-core`, attaches its jar to a GitHub
+Release, and deploys the parent POM plus `conductor-core` to GitHub Packages
+(`https://maven.pkg.github.com/nouhouari/conductor`). `conductor-example` sets
+`maven.deploy.skip=true` — it is a sample consumer, not a published artifact.
+
+Consumers add the repository and the dependency:
+
+```xml
+<dependency>
+  <groupId>com.nouhouari.conductor</groupId>
+  <artifactId>conductor-core</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
+After releasing, bump back to the next `-SNAPSHOT` for continued development.

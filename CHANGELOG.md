@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- **CI coverage for the Java port** — `ci.yml` gained a `java` job (temurin JDK 21) that builds and unit-tests `conductor-core`, compiles `conductor-example`'s step definitions and page objects, and runs a Cucumber JVM `--dry-run` over `example/features` with the real glue so undefined/ambiguous steps fail the build. The example's suites need real browsers/devices and are never executed on a hosted runner.
+- **`release-java.yml`** — releases the Java port on `java-v*` tags: verifies the tag matches `java/pom.xml` (and refuses `-SNAPSHOT`), attaches the `conductor-core` jar to a GitHub Release, and deploys the parent POM plus `conductor-core` to GitHub Packages Maven. `conductor-example` sets `maven.deploy.skip=true`.
+- `java/pom.xml` gained `<distributionManagement>` pointing at `https://maven.pkg.github.com/nouhouari/conductor`, and `java/README.md` a "CI & Releasing" section.
+
 ## [conductor-mcp 0.2.0] — 2026-07-30
 
 ### Added

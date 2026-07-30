@@ -95,3 +95,58 @@ jobs:
           }
           console.log('hooks resolved:', hooksPath);
           EOF
+
+  # ── conductor-java ─────────────────────────────────────────────────────
+  # Independent of the Node job: the Java port shares the Gherkin feature
+  # files under example/features but has its own Maven reactor under java/.
+  java:
+    name: Build & validate (Java)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'   # toolchain JDK; sources compile to release 17
+          cache: 'maven'
+
+      # conductor-core is the publishable library — it must build and pass its
+      # unit tests (ConfigLoaderTest) headlessly on every push. `install` (not
+      # `verify`) so the conductor-example steps below can resolve it from the
+      # local repository.
+      - name: Build & test (conductor-core)
+        working-directory: java
+        run: mvn -B -ntp -pl conductor-core -am install
+
+      # conductor-example's suites drive real browsers / JavaFX / a Postgres
+      # server, so they cannot run on a hosted runner. Compiling the step
+      # definitions and page objects still catches API drift in conductor-core.
+      - name: Compile step definitions & page objects (conductor-example)
+        working-directory: java
+        run: mvn -B -ntp -pl conductor-example -am test-compile
+
+      # Java counterpart of "Dry-run example scenarios" above: resolves every
+      # Gherkin step in example/features against the Java glue without
+      # launching a browser or device. Fails on undefined/ambiguous steps.
+      #
+      # The Cucumber CLI is used rather than `mvn test` because the JUnit
+      # Platform @Suite classes pin features/glue/plugin via
+      # @ConfigurationParameter, which takes precedence over -D properties.
+      - name: Dry-run example scenarios (Java glue)
+        working-directory: java
+        run: |
+          mvn -B -ntp -q -pl conductor-example \
+            dependency:build-classpath \
+            -Dmdep.outputFile=target/test-classpath.txt \
+            -Dmdep.includeScope=test
+          cd conductor-example
+          java -cp "target/classes:target/test-classes:$(cat target/test-classpath.txt)" \
+            io.cucumber.core.cli.Main \
+            --dry-run \
+            --glue com.nouhouari.conductor.hooks \
+            --glue com.nouhouari.conductor.example.stepdefs \
+            --plugin summary \
+            ../../example/features

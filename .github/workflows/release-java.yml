@@ -1,0 +1,73 @@
+name: Release conductor-java
+
+# Triggers on tags of the form java-v<semver>, e.g. java-v0.1.0.
+# Companion workflows: release.yml (v* → conductor-e2e npm package) and
+# release-mcp.yml (mcp-v* → conductor-mcp npm package).
+on:
+  push:
+    tags:
+      - 'java-v*'
+
+jobs:
+  release-java:
+    name: Build, GitHub Release & GitHub Packages publish (conductor-java)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create GitHub Release + upload assets
+      packages: write   # publish to GitHub Packages (Maven)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'   # toolchain JDK; sources compile to release 17
+          cache: 'maven'
+          # Writes a ~/.m2/settings.xml with a <server> whose id is `github`,
+          # matching the <distributionManagement> repository id in java/pom.xml.
+          server-id: github
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+      # Verify the pushed tag version matches java/pom.xml, and refuse to
+      # release a SNAPSHOT. e.g. tag java-v0.1.0 requires <version>0.1.0.
+      - name: Verify version matches tag
+        working-directory: java
+        run: |
+          POM_VERSION=$(mvn -B -ntp -q help:evaluate -Dexpression=project.version -DforceStdout)
+          TAG_VERSION="${GITHUB_REF#refs/tags/java-v}"
+          echo "pom=$POM_VERSION tag=$TAG_VERSION"
+          case "$POM_VERSION" in
+            *-SNAPSHOT)
+              echo "::error::Refusing to release SNAPSHOT version $POM_VERSION. Set a release version in java/pom.xml first (mvn versions:set -DnewVersion=$TAG_VERSION)."
+              exit 1
+              ;;
+          esac
+          if [ "$POM_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag java-v$TAG_VERSION does not match java/pom.xml version $POM_VERSION"
+            exit 1
+          fi
+
+      # conductor-example's suites need real browsers / devices, so only
+      # conductor-core (the publishable library) is built and tested here.
+      - name: Build & test (conductor-core)
+        working-directory: java
+        run: mvn -B -ntp -pl conductor-core -am verify
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            java/conductor-core/target/conductor-core-*.jar
+
+      # Publishes the parent POM + conductor-core to GitHub Packages.
+      # conductor-example sets maven.deploy.skip=true in its own POM.
+      - name: Publish to GitHub Packages
+        working-directory: java
+        run: mvn -B -ntp -pl conductor-core -am deploy -DskipTests
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}

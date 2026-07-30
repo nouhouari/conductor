@@ -17,6 +17,24 @@
     <module>conductor-example</module>
   </modules>
 
+  <!--
+    Publishing target for .github/workflows/release-java.yml (tag java-v*).
+    The repository id `github` must match the server-id configured by
+    actions/setup-java, which supplies the credentials at deploy time.
+  -->
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages — nouhouari/conductor</name>
+      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
+    </repository>
+    <snapshotRepository>
+      <id>github</id>
+      <name>GitHub Packages — nouhouari/conductor</name>
+      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
