@@ -3,6 +3,7 @@
  */
 
 import { getJavaSuiteClassName } from './java-suites.js';
+import { CONDUCTOR_JAVA_VERSION, CONDUCTOR_MAVEN_REPO_ID } from './java-pom.js';
 
 export function renderJavaReadme(projectName: string, platforms: readonly string[]): string {
   const platformList = platforms.map((p) => `- ${p}`).join('\n');
@@ -23,15 +24,30 @@ ${platformList}
 
 ## Setup
 
-Install the Conductor Java core artifact first, then install this project:
+This project depends on \`com.nouhouari.conductor:conductor-core:${CONDUCTOR_JAVA_VERSION}\`, published to GitHub Packages. Maven requires authentication for GitHub Packages even on public repositories, so add a matching \`<server>\` to your \`~/.m2/settings.xml\` using a personal access token with the \`read:packages\` scope:
+
+\`\`\`xml
+<server>
+  <id>${CONDUCTOR_MAVEN_REPO_ID}</id>
+  <username>YOUR_GITHUB_USERNAME</username>
+  <password>YOUR_TOKEN_WITH_read:packages</password>
+</server>
+\`\`\`
+
+Then:
 
 \`\`\`bash
-# From the Conductor monorepo:
-cd java && mvn -q install -DskipTests
-
-# From this generated project:
 mvn -q install -DskipTests
 \`\`\`
+
+Working from a local checkout of the Conductor monorepo instead? Install the
+core artifact yourself and remove the \`<repositories>\` block from \`pom.xml\`:
+
+\`\`\`bash
+cd java && mvn -q install -DskipTests
+\`\`\`
+
+Bump the \`<conductor.version>\` property in \`pom.xml\` to upgrade the framework.
 
 For web/API tests backed by Playwright Java, install the browser binaries when needed:
 
