@@ -13,9 +13,11 @@ export const waitForElementInputSchema = z.object({
     'fxagent selector for the element to wait for.',
   ),
   state: z
-    .enum(['visible', 'hidden', 'enabled', 'exists'])
+    .enum(['visible', 'hidden', 'enabled', 'disabled', 'exists'])
     .describe(
-      'Condition to wait for. "exists" waits for the element to appear in the scene graph.',
+      'Condition to wait for. "exists" waits for the element to appear in the scene graph ' +
+        '(regardless of visibility); "hidden" is satisfied by an element that is either ' +
+        'invisible or gone from the scene graph entirely.',
     ),
   timeoutMs: z.number().int().min(100).default(5000).describe(
     'Maximum time to wait in milliseconds. Default: 5000.',
@@ -44,26 +46,34 @@ export async function waitForElement(
   const start = Date.now();
 
   try {
-    const element = await client.waitForElement(
+    const { satisfied, element } = await client.waitForState(
       input.selector,
       input.state,
       input.timeoutMs,
     );
+    const elapsed = Date.now() - start;
 
-    const elapsed = Date.now() - start;
-    return text(
-      `Element reached state "${input.state}" after ${elapsed}ms:\n` +
-      formatFoundElement(element),
-    );
-  } catch (err) {
-    const elapsed = Date.now() - start;
-    if (err instanceof FxAgentProtocolError) {
+    if (satisfied) {
       return text(
-        `Timeout: "${input.selector}" did not reach state "${input.state}" ` +
-        `within ${input.timeoutMs}ms (elapsed: ${elapsed}ms). ${err.message}`,
+        `Element reached state "${input.state}" after ${elapsed}ms:\n` +
+        (element === null
+          ? `"${input.selector}" is not present in the scene graph.`
+          : formatFoundElement(element)),
       );
     }
+
+    return text(
+      `Timeout: "${input.selector}" did not reach state "${input.state}" ` +
+      `within ${input.timeoutMs}ms (elapsed: ${elapsed}ms). ` +
+      (element === null
+        ? 'The selector matched no element.'
+        : `Last seen: ${formatFoundElement(element)}`),
+    );
+  } catch (err) {
     if (err instanceof FxAgentConnectionError) {
+      return text(`Error: ${err.message}`);
+    }
+    if (err instanceof FxAgentProtocolError) {
       return text(`Error: ${err.message}`);
     }
     return text(`Error: ${String(err)}`);

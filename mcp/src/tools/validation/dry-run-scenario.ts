@@ -1,14 +1,23 @@
 /**
- * dry_run_scenario: Validate step definitions by running cucumber-js --dry-run.
+ * dry_run_scenario: Validate step definitions without executing them.
  *
- * Spawns npx cucumber-js --dry-run --format json in the project root,
- * parses the JSON output, and returns a structured result.
+ * TypeScript projects: spawns `npx cucumber-js --dry-run --format json`.
+ * Java projects: compiles the test sources with Maven, resolves the test
+ * classpath, then runs Cucumber-JVM's CLI (`io.cucumber.core.cli.Main`) with
+ * `--dry-run` and a json plugin. The CLI is used instead of `mvn test` because
+ * the suite classes pin `@ConfigurationParameter` values (features, tags,
+ * plugins) that take precedence over `-D` system properties, which would make
+ * the featurePath/tag/scenarioName inputs silently ineffective.
+ *
+ * Both paths emit the same cucumber JSON, so a single parser serves both.
  *
  * For each undefined step, attempts to find a similar existing step
  * using simple substring matching and reports a suggestion.
  */
 
 import { spawn } from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { ProjectPaths } from '../../project.js';
@@ -27,7 +36,8 @@ export const dryRunScenarioInputSchema = z.object({
     .optional()
     .describe("Run only scenarios with this tag (e.g. '@web')."),
   projectPath: z.string().optional().describe(
-    'Optional absolute path to the Conductor project root (containing cucumber.js). ' +
+    'Optional absolute path to the Conductor project root (a TypeScript project containing ' +
+      'cucumber.js, or a Java Maven module containing src/test/java glue). ' +
       'When omitted, auto-discovered. Pass this in monorepos where the heuristics fail.',
   ),
 });
@@ -146,9 +156,18 @@ function findSuggestion(pattern: string, knownPatterns: string[]): string | null
   return bestScore >= 0.3 ? best : null;
 }
 
-async function extractKnownPatterns(stepDefinitionsDir: string): Promise<string[]> {
+async function extractKnownPatterns(
+  stepDefinitionsDir: string,
+  language: ProjectPaths['language'],
+): Promise<string[]> {
   const { readdir, readFile } = await import('node:fs/promises');
   const patterns: string[] = [];
+  const ext = language === 'java' ? '.java' : '.ts';
+  // TS: Given('...'), Java: @Given("...")
+  const stepRegex =
+    language === 'java'
+      ? /@(?:Given|When|Then)\s*\(\s*"([\s\S]*?)"\s*\)/g
+      : /(?:Given|When|Then)\s*\(\s*['"`]([\s\S]*?)['"`]/g;
 
   async function walk(dir: string): Promise<void> {
     try {
@@ -157,13 +176,13 @@ async function extractKnownPatterns(stepDefinitionsDir: string): Promise<string[
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory() && entry.name !== 'node_modules') {
           await walk(fullPath);
-        } else if (entry.isFile() && entry.name.endsWith('.ts')) {
+        } else if (entry.isFile() && entry.name.endsWith(ext)) {
           try {
             const content = await readFile(fullPath, 'utf8');
-            const regex = /(?:Given|When|Then)\s*\(\s*['"`]([\s\S]*?)['"`]/g;
+            const regex = new RegExp(stepRegex.source, 'g');
             let match: RegExpExecArray | null;
             while ((match = regex.exec(content)) !== null) {
-              if (match[1]) patterns.push(match[1]);
+              if (match[1]) patterns.push(match[1].replace(/\\\\/g, '\\').replace(/\\"/g, '"'));
             }
           } catch {
             // Skip
@@ -179,17 +198,19 @@ async function extractKnownPatterns(stepDefinitionsDir: string): Promise<string[
   return patterns;
 }
 
-async function runDryRun(
-  projectRoot: string,
+/** Spawn a command, capturing output, with a hard timeout. */
+function runCommand(
+  command: string,
   args: string[],
-  timeoutMs = 60000,
+  cwd: string,
+  timeoutMs: number,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
 
-    const proc = spawn('npx', ['cucumber-js', '--dry-run', '--format', 'json', ...args], {
-      cwd: projectRoot,
+    const proc = spawn(command, args, {
+      cwd,
       env: process.env,
       // Prevent the dry-run from inheriting the parent's stdin
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -212,6 +233,11 @@ async function runDryRun(
       });
     }, timeoutMs);
 
+    proc.on('error', (error) => {
+      clearTimeout(timer);
+      resolve({ stdout, stderr: `${stderr}\n[conductor-mcp] ${error.message}`, exitCode: -1 });
+    });
+
     proc.on('close', (code) => {
       clearTimeout(timer);
       resolve({ stdout, stderr, exitCode: code ?? -1 });
@@ -219,30 +245,118 @@ async function runDryRun(
   });
 }
 
+async function runDryRun(
+  projectRoot: string,
+  args: string[],
+  timeoutMs = 60000,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  return runCommand(
+    'npx',
+    ['cucumber-js', '--dry-run', '--format', 'json', ...args],
+    projectRoot,
+    timeoutMs,
+  );
+}
+
+/** Maven wrapper if the module (or its parent) ships one, otherwise plain mvn. */
+async function resolveMavenCommand(moduleDir: string): Promise<string> {
+  for (const dir of [moduleDir, path.dirname(moduleDir)]) {
+    const wrapper = path.join(dir, 'mvnw');
+    try {
+      await fs.access(wrapper);
+      return wrapper;
+    } catch {
+      // Keep looking
+    }
+  }
+  return 'mvn';
+}
+
+/**
+ * Compile test sources, resolve the test classpath, and run Cucumber-JVM's CLI
+ * in dry-run mode. Returns the parsed-ready JSON plus the raw tool output.
+ */
+async function runJavaDryRun(
+  paths: ProjectPaths,
+  input: DryRunScenarioInput,
+): Promise<{ json: string; output: string; exitCode: number }> {
+  const moduleDir = paths.javaModule ?? paths.root;
+  const mvn = await resolveMavenCommand(moduleDir);
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'conductor-dry-run-'));
+  const classpathFile = path.join(tmpDir, 'classpath.txt');
+  const reportFile = path.join(tmpDir, 'dry-run.json');
+  let output = '';
+
+  try {
+    const compile = await runCommand(mvn, ['-B', '-q', 'test-compile'], moduleDir, 300000);
+    output += `$ ${mvn} -B -q test-compile\n${compile.stdout}\n${compile.stderr}\n`;
+    if (compile.exitCode !== 0) {
+      return { json: '', output, exitCode: compile.exitCode };
+    }
+
+    const cp = await runCommand(
+      mvn,
+      [
+        '-B',
+        '-q',
+        'dependency:build-classpath',
+        `-Dmdep.outputFile=${classpathFile}`,
+        '-Dmdep.includeScope=test',
+      ],
+      moduleDir,
+      300000,
+    );
+    output += `\n$ ${mvn} -B -q dependency:build-classpath\n${cp.stdout}\n${cp.stderr}\n`;
+    if (cp.exitCode !== 0) {
+      return { json: '', output, exitCode: cp.exitCode };
+    }
+
+    const deps = (await fs.readFile(classpathFile, 'utf8')).trim();
+    const classpath = [
+      path.join(moduleDir, 'target', 'test-classes'),
+      path.join(moduleDir, 'target', 'classes'),
+      deps,
+    ]
+      .filter((entry) => entry.length > 0)
+      .join(path.delimiter);
+
+    const glue = paths.javaGluePackages ?? [];
+    const cliArgs = ['-cp', classpath, 'io.cucumber.core.cli.Main', '--dry-run', '--plugin', `json:${reportFile}`];
+    for (const pkg of glue) {
+      cliArgs.push('--glue', pkg);
+    }
+    if (input.scenarioName) cliArgs.push('--name', input.scenarioName);
+    if (input.tag) cliArgs.push('--tags', input.tag);
+    cliArgs.push(
+      input.featurePath ? path.resolve(paths.root, input.featurePath) : paths.features,
+    );
+
+    const run = await runCommand('java', cliArgs, moduleDir, 120000);
+    output += `\n$ java io.cucumber.core.cli.Main --dry-run ...\n${run.stdout}\n${run.stderr}\n`;
+
+    let json = '';
+    try {
+      json = (await fs.readFile(reportFile, 'utf8')).trim();
+    } catch {
+      // Left empty — the caller reports the missing-JSON error
+    }
+    return { json, output, exitCode: run.exitCode };
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
 export async function dryRunScenario(
   paths: ProjectPaths,
   input: DryRunScenarioInput,
 ): Promise<DryRunResult> {
-  const args: string[] = [];
-
-  if (input.featurePath) {
-    args.push(path.resolve(paths.root, input.featurePath));
-  }
-  if (input.scenarioName) {
-    args.push('--name', input.scenarioName);
-  }
-  if (input.tag) {
-    args.push('--tags', input.tag);
-  }
-
-  const { stdout, stderr, exitCode } = await runDryRun(paths.root, args);
-
-  // cucumber-js with --format json writes JSON to stdout; progress info to stderr
-  const jsonOutput = stdout.trim();
-  const combinedOutput = `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+  const { jsonOutput, combinedOutput, exitCode } =
+    paths.language === 'java'
+      ? await collectJavaOutput(paths, input)
+      : await collectTypeScriptOutput(paths, input);
 
   if (!jsonOutput || (!jsonOutput.startsWith('[') && !jsonOutput.startsWith('{'))) {
-    // No valid JSON output — likely a config error
+    // No valid JSON output — likely a config or compilation error
     return {
       success: false,
       scenarios: 0,
@@ -250,12 +364,12 @@ export async function dryRunScenario(
       rawOutput: combinedOutput,
       errorMessage:
         `Cucumber dry-run did not produce JSON output (exit code ${exitCode}). ` +
-        `stderr: ${stderr.slice(0, 500)}`,
+        `Output tail: ${combinedOutput.slice(-500)}`,
     };
   }
 
   const parsed = parseJsonOutput(jsonOutput);
-  const knownPatterns = await extractKnownPatterns(paths.stepDefinitions);
+  const knownPatterns = await extractKnownPatterns(paths.stepDefinitions, paths.language);
 
   const undefinedWithSuggestions: UndefinedStep[] = parsed.undefined.map((pattern) => ({
     pattern,
@@ -277,4 +391,39 @@ export async function dryRunScenario(
     rawOutput: combinedOutput,
     errorMessage: success ? null : `Dry-run completed with issues. See steps.undefined for undefined steps.`,
   };
+}
+
+/** TypeScript path: cucumber-js writes JSON to stdout, progress to stderr. */
+async function collectTypeScriptOutput(
+  paths: ProjectPaths,
+  input: DryRunScenarioInput,
+): Promise<{ jsonOutput: string; combinedOutput: string; exitCode: number }> {
+  const args: string[] = [];
+
+  if (input.featurePath) {
+    args.push(path.resolve(paths.root, input.featurePath));
+  }
+  if (input.scenarioName) {
+    args.push('--name', input.scenarioName);
+  }
+  if (input.tag) {
+    args.push('--tags', input.tag);
+  }
+
+  const { stdout, stderr, exitCode } = await runDryRun(paths.root, args);
+
+  return {
+    jsonOutput: stdout.trim(),
+    combinedOutput: `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`,
+    exitCode,
+  };
+}
+
+/** Java path: Cucumber-JVM writes JSON to a file via the json plugin. */
+async function collectJavaOutput(
+  paths: ProjectPaths,
+  input: DryRunScenarioInput,
+): Promise<{ jsonOutput: string; combinedOutput: string; exitCode: number }> {
+  const { json, output, exitCode } = await runJavaDryRun(paths, input);
+  return { jsonOutput: json, combinedOutput: output, exitCode };
 }

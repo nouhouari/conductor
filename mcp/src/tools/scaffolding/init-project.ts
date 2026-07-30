@@ -19,13 +19,26 @@ import { renderEnvExample } from '../../templates/project/env-example.js';
 import { renderGitignore } from '../../templates/project/gitignore.js';
 import { renderReadme } from '../../templates/project/readme.js';
 import { getSamplesForPlatforms } from '../../templates/project/samples.js';
+import { renderJavaPom } from '../../templates/project/java-pom.js';
+import { renderJavaSuite, getJavaSuiteClassName, type JavaSuitePlatform } from '../../templates/project/java-suites.js';
+import { renderJavaConfigYml } from '../../templates/project/java-config.js';
+import { getJavaSamplesForPlatforms } from '../../templates/project/java-samples.js';
+import { renderJavaReadme } from '../../templates/project/java-readme.js';
+import { renderJavaGitignore } from '../../templates/project/java-gitignore.js';
 
-const PLATFORM_VALUES = ['web', 'api', 'mobile', 'desktop', 'cross-platform'] as const;
+const PLATFORM_VALUES = ['web', 'api', 'mobile', 'desktop', 'flutter-desktop', 'cross-platform'] as const;
 type Platform = typeof PLATFORM_VALUES[number];
 
 export const initProjectInputSchema = z.object({
   path: z.string().describe("Absolute path to the target directory. Created if it doesn't exist."),
   name: z.string().describe("Project name (used in package.json and README)."),
+  language: z
+    .enum(['typescript', 'java'])
+    .default('typescript')
+    .describe(
+      "Implementation language to scaffold. Default: 'typescript' (the existing npm/cucumber-js layout). " +
+        "'java' writes a Maven/Cucumber-JVM/JUnit Platform project instead.",
+    ),
   platforms: z
     .array(z.enum(PLATFORM_VALUES))
     .min(1)
@@ -35,9 +48,25 @@ export const initProjectInputSchema = z.object({
         "'api' (REST testing via Playwright APIRequestContext), " +
         "'mobile' (Flutter / native mobile via Maestro), " +
         "'desktop' (JavaFX desktop apps via javafx-driver / fxagent.jar), " +
+        "'flutter-desktop' (Flutter desktop apps via Dart VM service / flutter_driver), " +
         "'cross-platform' (a single scenario that spans browser + API + Maestro + JavaFX). " +
         "Each platform adds a cucumber profile, an npm test script, and (if includeSamples) a starter feature + step-def. " +
-        "When the user does not specify, ask which of these five they want — desktop in particular is often missed.",
+        "When the user does not specify, ask which of these six they want — desktop in particular is often missed.",
+    ),
+  groupId: z
+    .string()
+    .optional()
+    .describe("Java only: Maven groupId. Defaults to 'com.example' when language='java'."),
+  artifactId: z
+    .string()
+    .optional()
+    .describe("Java only: Maven artifactId. Defaults to a kebab-case form of name when language='java'."),
+  basePackage: z
+    .string()
+    .optional()
+    .describe(
+      "Java only: base Java package for generated stepdefs/pages/suites. " +
+        "Defaults to '<groupId>.<artifactId as a Java identifier>'.",
     ),
   includeSamples: z
     .boolean()
@@ -105,6 +134,28 @@ function getDirectoriesToCreate(platforms: readonly Platform[]): string[] {
   return [...featureDirs, ...dirs];
 }
 
+function getJavaDirectoriesToCreate(platforms: readonly Platform[], basePackage: string): string[] {
+  const basePath = basePackage.replaceAll('.', '/');
+  const dirs = [
+    `src/test/java/${basePath}/stepdefs`,
+    `src/test/java/${basePath}/pages`,
+    `src/test/java/${basePath}/suites`,
+    'src/test/resources/features',
+    'src/test/resources/config',
+    'reports',
+  ];
+
+  for (const platform of platforms) {
+    dirs.push(`src/test/resources/features/${platform}`);
+  }
+
+  if (platforms.includes('mobile') || platforms.includes('cross-platform')) {
+    dirs.push('flows/mobile');
+  }
+
+  return dirs;
+}
+
 function buildNextSteps(projectPath: string, platforms: readonly Platform[]): string[] {
   const steps = [
     `cd ${projectPath}`,
@@ -121,6 +172,47 @@ function buildNextSteps(projectPath: string, platforms: readonly Platform[]): st
   );
 
   return steps;
+}
+
+function buildJavaNextSteps(projectPath: string, platforms: readonly Platform[]): string[] {
+  const steps = [
+    `cd ${projectPath}`,
+    'mvn -q install -DskipTests   # requires com.nouhouari.conductor:conductor-core:0.1.0-SNAPSHOT installed locally first',
+  ];
+
+  if (platforms.includes('web') || platforms.includes('cross-platform')) {
+    steps.push('mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"');
+  }
+
+  const firstSuite = platforms.length > 0
+    ? getJavaSuiteClassName(platforms[0] as JavaSuitePlatform)
+    : getJavaSuiteClassName('all');
+  steps.push(
+    `mvn test -Dtest=${firstSuite}`,
+    'mvn test -Dtest=DefaultSuiteTest   # run all local feature files',
+    '# Restart the MCP server so it picks up the new Java project layout',
+  );
+
+  return steps;
+}
+
+function toArtifactId(name: string): string {
+  const artifactId = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return artifactId || 'conductor-tests';
+}
+
+function toPackageSegment(value: string): string {
+  const words = value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 0);
+  const segment = words.join('');
+  if (!segment) return 'tests';
+  return /^[a-z]/.test(segment) ? segment : `_${segment}`;
 }
 
 export async function initProject(input: InitProjectInput): Promise<InitProjectResult> {
@@ -142,6 +234,46 @@ export async function initProject(input: InitProjectInput): Promise<InitProjectR
     const absPath = path.join(targetPath, relativePath);
     await writeFile(absPath, content);
     writtenFiles.push(relativePath);
+  }
+
+  if (input.language === 'java') {
+    const groupId = input.groupId ?? 'com.example';
+    const artifactId = input.artifactId ?? toArtifactId(input.name);
+    const basePackage = input.basePackage ?? `${groupId}.${toPackageSegment(artifactId)}`;
+    const basePath = basePackage.replaceAll('.', '/');
+
+    for (const dir of getJavaDirectoriesToCreate(platforms, basePackage)) {
+      await fs.mkdir(path.join(targetPath, dir), { recursive: true });
+    }
+
+    await write('pom.xml', renderJavaPom({ name: input.name, groupId, artifactId, platforms }));
+    await write('src/test/resources/config/local-overrides.yml', renderJavaConfigYml({ platforms, webBaseUrl: input.webBaseUrl }));
+    await write('.gitignore', renderJavaGitignore());
+    await write('README.md', renderJavaReadme(input.name, platforms));
+    await write('reports/.gitkeep', '');
+
+    await write(`src/test/java/${basePath}/suites/DefaultSuiteTest.java`, renderJavaSuite('all', basePackage));
+    for (const platform of platforms) {
+      await write(
+        `src/test/java/${basePath}/suites/${getJavaSuiteClassName(platform as JavaSuitePlatform)}.java`,
+        renderJavaSuite(platform as JavaSuitePlatform, basePackage),
+      );
+    }
+
+    if (input.includeSamples) {
+      const samples = getJavaSamplesForPlatforms(platforms, basePackage);
+      for (const sample of samples) {
+        await write(sample.relativePath, sample.content);
+      }
+    }
+
+    const nextSteps = buildJavaNextSteps(targetPath, platforms);
+
+    return {
+      path: targetPath,
+      files: writtenFiles,
+      nextSteps,
+    };
   }
 
   // Create directory structure

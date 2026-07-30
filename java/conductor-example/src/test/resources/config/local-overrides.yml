@@ -1,0 +1,16 @@
+# Repo-specific paths for this monorepo, merged on top of conductor-core's
+# generic config/default.yml by ConfigLoader. Maven resource filtering
+# (pom.xml testResources filtering=true) substitutes ${project.basedir} at
+# build time — the Java equivalent of the TS side's __dirname-relative
+# path resolution in config/environments/default.ts.
+mobile:
+  flowsDir: "${project.basedir}/../../example/flows/mobile"
+desktop:
+  agentJar: "${project.basedir}/../../apps/desktop/agent/fxagent.jar"
+  defaultTimeoutMs: 10000
+  screenshotDir: reports/screenshots
+flutterDesktop:
+  appPath: "${project.basedir}/../../apps/mobile/build/macos/Build/Products/Profile/todoapp.app/Contents/MacOS/todoapp"
+  defaultTimeoutMs: 10000
+  launchTimeoutMs: 30000
+  screenshotDir: reports/screenshots

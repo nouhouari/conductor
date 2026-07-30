@@ -1,0 +1,20 @@
+# Generic library defaults for conductor-core. Consuming projects (like
+# conductor-example) supply repo-specific paths (desktop.agentJar,
+# flutterDesktop.appPath, mobile.flowsDir) via their own
+# config/local-overrides.yml on the classpath — see ConfigLoader.
+name: default
+web:
+  baseUrl: http://localhost:3000
+  headless: true
+  browserName: chromium
+api:
+  baseUrl: http://localhost:3000
+  defaultCredentials:
+    username: test@example.com
+    password: password
+  timeoutMs: 30000
+mobile:
+  flowsDir: flows/mobile
+  timeoutMs: 120000
+database:
+  enabled: false

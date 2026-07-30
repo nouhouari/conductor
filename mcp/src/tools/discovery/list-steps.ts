@@ -1,5 +1,8 @@
 /**
- * list_steps: Walk step-definitions/**\/*.ts and extract Cucumber step definitions.
+ * list_steps: Extract Cucumber step definitions from a project's glue code.
+ *
+ * TypeScript projects: walk step-definitions/**\/*.ts for Given/When/Then calls.
+ * Java projects: walk the glue package's *.java for @Given/@When/@Then annotations.
  *
  * Extracts:
  * - pattern (the string/regex passed to Given/When/Then)
@@ -12,7 +15,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
-import type { ProjectPaths } from '../../project.js';
+import type { ProjectPaths, ProjectLanguage } from '../../project.js';
 
 export const listStepsInputSchema = z.object({
   filter: z.enum(['given', 'when', 'then']).optional().describe(
@@ -41,6 +44,28 @@ export interface StepInfo {
 /** Regex to match Given/When/Then declarations with string or backtick delimiters. */
 const STEP_REGEX = /^\s*(Given|When|Then)\s*\(\s*(['"`])([\s\S]*?)\2/;
 
+/**
+ * Regex to match Cucumber-JVM step annotations: `@Given("I open {string}")`.
+ * Java has no backtick strings, so only double quotes are considered.
+ */
+const JAVA_STEP_REGEX = /^\s*@(Given|When|Then)\s*\(\s*"((?:[^"\\]|\\.)*)"/;
+
+/** Unescape a Java string literal enough to recover the Cucumber expression. */
+function unescapeJavaLiteral(literal: string): string {
+  return literal.replace(/\\(["\\nrt])/g, (_match, char: string) => {
+    switch (char) {
+      case 'n':
+        return '\n';
+      case 'r':
+        return '\r';
+      case 't':
+        return '\t';
+      default:
+        return char;
+    }
+  });
+}
+
 /** Regex to extract Cucumber parameter types like {string}, {int}, etc. */
 const PARAM_TYPE_REGEX = /\{(string|int|float|word|bigdecimal|[a-z]+)\}/g;
 
@@ -65,6 +90,7 @@ async function walkDirectory(dir: string, ext: string): Promise<string[]> {
 async function extractStepsFromFile(
   filePath: string,
   projectRoot: string,
+  language: ProjectLanguage,
 ): Promise<StepInfo[]> {
   const content = await fs.readFile(filePath, 'utf8');
   const lines = content.split('\n');
@@ -73,11 +99,15 @@ async function extractStepsFromFile(
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // lines[i] is always defined because we split on '\n' and iterate within bounds
-    const match = STEP_REGEX.exec(line ?? '');
+    const match =
+      language === 'java'
+        ? JAVA_STEP_REGEX.exec(line ?? '')
+        : STEP_REGEX.exec(line ?? '');
     if (!match) continue;
 
     const type = match[1] as 'Given' | 'When' | 'Then';
-    const pattern = match[3] ?? '';
+    const pattern =
+      language === 'java' ? unescapeJavaLiteral(match[2] ?? '') : match[3] ?? '';
 
     const paramTypes: string[] = [];
     let paramMatch: RegExpExecArray | null;
@@ -135,11 +165,12 @@ export async function listSteps(
   paths: ProjectPaths,
   input: ListStepsInput,
 ): Promise<StepInfo[]> {
-  const files = await walkDirectory(paths.stepDefinitions, '.ts');
+  const sourceExt = paths.language === 'java' ? '.java' : '.ts';
+  const files = await walkDirectory(paths.stepDefinitions, sourceExt);
   const allSteps: StepInfo[] = [];
 
   for (const file of files) {
-    const steps = await extractStepsFromFile(file, paths.root);
+    const steps = await extractStepsFromFile(file, paths.root, paths.language);
     allSteps.push(...steps);
   }
 

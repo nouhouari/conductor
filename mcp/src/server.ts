@@ -84,7 +84,9 @@ export function createServer(cwd: string = process.cwd()): McpServer {
     {
       title: 'List Step Definitions',
       description:
-        'Walk step-definitions/**/*.ts and return all registered Cucumber steps. ' +
+        'Walk the project step definitions and return all registered Cucumber steps. ' +
+        'Handles both TypeScript projects (step-definitions/**/*.ts) and Java projects ' +
+        '(src/test/java glue with @Given/@When/@Then annotations). ' +
         'Each entry includes the pattern, type (Given/When/Then), file, line number, ' +
         'parameter types, and which feature files use that step.',
       inputSchema: listStepsInputSchema,
@@ -108,8 +110,9 @@ export function createServer(cwd: string = process.cwd()): McpServer {
     {
       title: 'List Page Objects',
       description:
-        'Walk pages/**/*.ts and extract class names, their base class, and public method signatures. ' +
-        'Uses a lightweight regex parser — no TypeScript compiler required.',
+        'Walk the project page objects (pages/**/*.ts, or the Java pages package) and extract ' +
+        'class names, their base class, and public method signatures. ' +
+        'Uses a lightweight regex parser — no TypeScript compiler or Java parser required.',
       inputSchema: listPageObjectsInputSchema,
     },
     async (input) => {
@@ -177,13 +180,16 @@ export function createServer(cwd: string = process.cwd()): McpServer {
       title: 'Get Conductor API Reference',
       description:
         'Return markdown API reference for the conductor-e2e framework. ' +
-        'Covers ConductorWorld, WebDriver, ApiDriver, MaestroDriver, JavaFxDriver, DatabaseDriver, and BasePage. ' +
+        'Covers ConductorWorld, WebDriver, ApiDriver, MaestroDriver, FlutterDesktopDriver, JavaFxDriver, DatabaseDriver, and BasePage. ' +
+        'Automatically returns Java docs for Java projects and TypeScript docs otherwise. ' +
         'Use this before writing step definitions or page objects to understand the available API.',
       inputSchema: getConductorApiInputSchema,
     },
     async (input) => {
       try {
-        const result = getConductorApi(input);
+        const context = await getContext(input.projectPath);
+        const language = context.isInitialized ? context.paths.language : 'typescript';
+        const result = getConductorApi(input, language);
         return toTextContent(result);
       } catch (err) {
         return errorContent(`get_conductor_api failed: ${String(err)}`);
@@ -234,6 +240,8 @@ export function createServer(cwd: string = process.cwd()): McpServer {
         'and leave `includeSamples` at its default of false. ' +
         'Writes package.json, tsconfig.json, cucumber.js, .env.example, .gitignore, ' +
         'README.md, and the directory tree. ' +
+        'Pass language="java" to bootstrap a Maven project instead (pom.xml, JUnit Platform suite ' +
+        'classes, YAML config under src/test/resources/config, Java step definitions). ' +
         'Only set includeSamples=true if the user explicitly wants a runnable demo — ' +
         'otherwise the placeholder example.feature files show up as undefined scenarios ' +
         'in `npm test`. Real features should come from scaffold_feature / scaffold_step_def ' +
@@ -281,8 +289,9 @@ export function createServer(cwd: string = process.cwd()): McpServer {
     {
       title: 'Scaffold Step Definition File',
       description:
-        'Create or append to a step definition file in step-definitions/<name>.steps.ts. ' +
-        'Infers TypeScript parameter types from {string}, {int}, {float} in patterns. ' +
+        'Create or append to a step definition file: TypeScript projects get ' +
+        'step-definitions/<name>.steps.ts, Java projects get <Name>Steps.java in the glue package. ' +
+        'Infers parameter types from {string}, {int}, {float} in patterns. ' +
         'IMPORTANT: when you provide a body that references identifiers (e.g. email, path, expected), also pass paramNames matching ' +
         "those identifiers in placeholder order — otherwise the generated parameters default to value/value2/count and the file won't compile. " +
         'If the file exists, only adds steps whose pattern is not already present (idempotent). ' +
@@ -308,7 +317,8 @@ export function createServer(cwd: string = process.cwd()): McpServer {
     {
       title: 'Scaffold Page Object',
       description:
-        'Create a TypeScript page object class in pages/<Name>Page.ts that extends BasePage. ' +
+        'Create a page object class extending BasePage — pages/<Name>Page.ts in a TypeScript project, ' +
+        '<Name>Page.java in the pages package of a Java project. ' +
         'Generates private Locator fields, a constructor with initializers, and method stubs. ' +
         'Refuses to overwrite unless overwrite=true.',
       inputSchema: scaffoldPageObjectInputSchema,
@@ -389,7 +399,9 @@ export function createServer(cwd: string = process.cwd()): McpServer {
     {
       title: 'Dry-Run Scenarios',
       description:
-        'Validate step definitions by running `npx cucumber-js --dry-run --format json` in the project root. ' +
+        'Validate step definitions without executing them. TypeScript projects run ' +
+        '`npx cucumber-js --dry-run --format json`; Java projects run `mvn test-compile` and then ' +
+        "Cucumber-JVM's CLI in dry-run mode against the resolved test classpath (slower — expect a Maven build). " +
         'Returns the number of scenarios, step counts by status (passed/undefined/pending/failed), ' +
         'and for each undefined step: the pattern and a suggestion (an existing similar step or a scaffold recommendation). ' +
         'Optionally scope to a specific feature file, scenario name, or tag.',
@@ -504,9 +516,12 @@ export function createServer(cwd: string = process.cwd()): McpServer {
       title: 'Wait For Desktop Element (JavaFX)',
       description:
         'Wait until a JavaFX UI element reaches a specified state: ' +
-        '"exists" (appears in scene), "visible", "enabled", or "hidden". ' +
+        '"exists" (present in the scene graph), "visible", "hidden" (absent, or present but not visible), ' +
+        '"enabled", or "disabled". ' +
+        'Polls the agent client-side, so waiting for an element to disappear works even though ' +
+        "the agent's own wait endpoint errors when nothing matches. " +
         'Useful after actions that trigger async UI changes (dialogs, loading spinners, navigation). ' +
-        'Returns element info when the condition is met, or a timeout error after timeoutMs.',
+        'Returns element info when the condition is met, or a timeout message (with the last-seen state) after timeoutMs.',
       inputSchema: waitForElementInputSchema,
     },
     async (input) => {

@@ -1,6 +1,6 @@
 {
   "name": "@nouhouari/conductor-mcp",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "MCP server for AI-assisted E2E test authoring with the Conductor framework",
   "keywords": [
     "mcp",

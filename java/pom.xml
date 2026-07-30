@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.nouhouari.conductor</groupId>
+  <artifactId>conductor-java-parent</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Conductor E2E (Java)</name>
+  <description>Java/Cucumber-JVM/Playwright port of the Conductor multi-platform E2E test framework, developed alongside the existing TypeScript implementation.</description>
+
+  <modules>
+    <module>conductor-core</module>
+    <module>conductor-example</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+
+    <cucumber.version>7.18.1</cucumber.version>
+    <junit.jupiter.version>5.10.3</junit.jupiter.version>
+    <junit.platform.version>1.10.3</junit.platform.version>
+    <playwright.version>1.47.0</playwright.version>
+    <jackson.version>2.17.2</jackson.version>
+    <slf4j.version>2.0.13</slf4j.version>
+    <logback.version>1.5.7</logback.version>
+    <allure.version>2.29.0</allure.version>
+    <assertj.version>3.26.3</assertj.version>
+
+    <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
+    <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.microsoft.playwright</groupId>
+        <artifactId>playwright</artifactId>
+        <version>${playwright.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-java</artifactId>
+        <version>${cucumber.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-picocontainer</artifactId>
+        <version>${cucumber.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-junit-platform-engine</artifactId>
+        <version>${cucumber.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.jupiter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-suite</artifactId>
+        <version>${junit.platform.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-yaml</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>${logback.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-cucumber7-jvm</artifactId>
+        <version>${allure.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>${assertj.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven.compiler.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven.surefire.plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
