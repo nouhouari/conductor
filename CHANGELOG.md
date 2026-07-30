@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [conductor-mcp 0.2.0] — 2026-07-30
+
+### Added
+
+- **Java project support** — every project-aware tool now detects whether the working directory belongs to a TypeScript project (`cucumber.js`) or a Java/Maven project (`pom.xml` + Cucumber glue under `src/test/java`) and adapts accordingly. When both are found, the closest project to the working directory wins.
+  - `list_steps` parses `@Given` / `@When` / `@Then` annotations in `.java` sources.
+  - `list_page_objects` parses Java page-object classes and their public methods.
+  - `scaffold_step_def` / `scaffold_page_object` emit Java sources into the resolved glue and page packages.
+  - `dry_run_scenario` runs the Cucumber JVM CLI (`mvn test-compile` → `dependency:build-classpath` → `io.cucumber.core.cli.Main --dry-run`) and reports undefined/ambiguous steps. The CLI is used instead of `mvn test` because JUnit Platform suite `@ConfigurationParameter` values override `-D` system properties.
+  - `get_conductor_api` accepts `language: "java"` and returns the Java API surface for all 8 surfaces.
+- **`init_project` accepts `language: "java"`** — bootstraps a Maven project (pom, JUnit Platform suites, `conductor.yml`, sample feature/step-def/page object, README, `.gitignore`) with configurable `groupId`, `artifactId` and `basePackage`. The `flutter-desktop` platform is now selectable.
+
+### Fixed
+
+- **`wait_for_desktop_element` with `state: "hidden"` (or `disabled`) always errored** — it called the fxagent `POST /api/v1/elements/wait` endpoint, which returns HTTP 500 when nothing matches the selector, making "wait for this to disappear" impossible. The tool now polls `POST /api/v1/elements/query` client-side and reports the last-seen element on timeout. Supported states: `visible`, `hidden`, `enabled`, `disabled`, `exists`.
+
 ## [0.1.6] — 2026-06-21
 
 ### Added

@@ -95,7 +95,8 @@ and Flutter macOS builds, no mocks):
   environment-overlay precedence verified.
 
 `JavaFxDriver`'s vocabulary is now verified against a running `fxagent.jar`
-(v0.3.0): actions are `"click"`, `"clear"`, `"fill"`, `"select"`,
+(v1.0.0, package `com.hin.fxagent`; the wire protocol is unchanged from the
+earlier v0.3.0 build): actions are `"click"`, `"clear"`, `"fill"`, `"select"`,
 `"setText"`, and waits are polled client-side via
 `POST /api/v1/elements/query` — the agent's `/api/v1/elements/wait` cannot
 express `hidden`/absent states (it 500s when nothing matches).
