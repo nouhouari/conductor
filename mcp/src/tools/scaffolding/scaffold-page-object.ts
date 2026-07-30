@@ -8,7 +8,12 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { ProjectPaths } from '../../project.js';
+import { javaPackageForDir } from '../../java-project.js';
 import { renderPageObjectTemplate } from '../../templates/artifact/page-object.js';
+import {
+  javaPageClassName,
+  renderJavaPageObjectTemplate,
+} from '../../templates/artifact/page-object-java.js';
 
 export const scaffoldPageObjectInputSchema = z.object({
   name: z
@@ -32,13 +37,15 @@ export const scaffoldPageObjectInputSchema = z.object({
           "Full method signature starting from the method name, e.g. 'login(email: string, password: string): Promise<void>'. " +
             "Prefix 'async ' for async functions. " +
             'For Locator-returning helpers, declare the return type explicitly (e.g. `errorMessage(): Locator`) — ' +
-            'the scaffolder will skip the implicit `async` so the file compiles.',
+            'the scaffolder will skip the implicit `async` so the file compiles. ' +
+            "In a Java project, write the Java signature instead, e.g. 'void login(String email, String password)' " +
+            '(a missing return type defaults to void).',
         ),
         body: z
           .string()
           .optional()
           .describe(
-            'Optional method body (TypeScript code). Written as-is between { and }, indented for you. ' +
+            'Optional method body (TypeScript, or Java in a Java project). Written as-is between { and }, indented for you. ' +
               'Omit to get a `// TODO: implement <name>` stub.',
           ),
       }),
@@ -70,10 +77,18 @@ export async function scaffoldPageObject(
   input: ScaffoldPageObjectInput,
 ): Promise<ScaffoldPageObjectResult> {
   // Ensure the class name ends with 'Page' and the file is named accordingly
+  const isJava = paths.language === 'java';
   const baseName = input.name.endsWith('Page') ? input.name : `${input.name}Page`;
-  const fileName = `${baseName}.ts`;
+  const className = isJava ? javaPageClassName(baseName) : baseName;
+  const fileName = `${className}${isJava ? '.java' : '.ts'}`;
   const filePath = path.join(paths.pages, fileName);
-  const content = renderPageObjectTemplate(baseName, input.locators, input.methods);
+  const content = isJava
+    ? renderJavaPageObjectTemplate(
+        { packageName: javaPackageForDir(paths.javaModule ?? paths.root, paths.pages), className },
+        input.locators,
+        input.methods,
+      )
+    : renderPageObjectTemplate(className, input.locators, input.methods);
 
   // Check existence
   try {

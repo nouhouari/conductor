@@ -29,7 +29,11 @@ public class FxAgentClient {
     public static final int DEFAULT_PORT = 4567;
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
-    public record ElementNode(String handle, String id, String type, String fullType) {
+    public record ElementNode(String handle, String id, String type, String fullType, boolean visible,
+            boolean enabled) {
+    }
+
+    public record QueryResponse(java.util.List<ElementNode> elements) {
     }
 
     public record ActionResponse(boolean success, String message) {
@@ -55,7 +59,8 @@ public class FxAgentClient {
     private final String host;
     private final int port;
     private final HttpClient http = HttpClient.newHttpClient();
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new ObjectMapper()
+            .disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     public FxAgentClient() {
         this(DEFAULT_HOST, DEFAULT_PORT);
@@ -93,6 +98,19 @@ public class FxAgentClient {
         body.put("timeoutMs", timeoutMs);
         body.put("pollIntervalMs", 200);
         return post("/api/v1/elements/wait", body, ElementNode.class);
+    }
+
+    /**
+     * Single-element query used for client-side wait polling — the agent's own
+     * {@code /elements/wait} cannot express "hidden"/"absent" (it fails when no
+     * element matches), so waits are polled here exactly as the npm
+     * {@code javafx-driver} does.
+     */
+    public QueryResponse queryNode(String selector) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("selector", selector);
+        body.put("maxResults", 1);
+        return post("/api/v1/elements/query", body, QueryResponse.class);
     }
 
     public ScreenshotResponse captureScreenshot(String selector, Integer windowIndex) {

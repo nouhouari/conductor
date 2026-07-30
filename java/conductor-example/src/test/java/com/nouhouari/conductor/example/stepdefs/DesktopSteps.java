@@ -20,7 +20,7 @@ public class DesktopSteps {
 
     @Given("the desktop app is running")
     public void theDesktopAppIsRunning() {
-        String jarPath = Paths.get("../apps/desktop/build/libs/todoapp-desktop-all.jar").toAbsolutePath().toString();
+        String jarPath = Paths.get("../../apps/desktop/build/libs/todoapp-desktop-all.jar").toAbsolutePath().normalize().toString();
         String apiUrl = System.getenv("API_BASE_URL_FOR_DESKTOP") != null
                 ? System.getenv("API_BASE_URL_FOR_DESKTOP")
                 : world.config.api().baseUrl();

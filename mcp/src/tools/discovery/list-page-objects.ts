@@ -1,8 +1,9 @@
 /**
- * list_page_objects: Walk pages/**\/*.ts and extract class + method signatures.
+ * list_page_objects: Extract page-object classes + method signatures.
  *
- * Uses a lightweight regex tokenizer — no full TypeScript compiler needed.
- * Detects classes that extend BasePage and their public/protected methods.
+ * TypeScript projects: walk pages/**\/*.ts. Java projects: walk the project's
+ * pages package for *.java. Uses a lightweight regex tokenizer — no TypeScript
+ * compiler or Java parser needed.
  */
 
 import * as fs from 'node:fs/promises';
@@ -45,6 +46,17 @@ const CLASS_REGEX = /class\s+(\w+)\s+extends\s+(\w+)/;
  */
 const METHOD_REGEX =
   /^\s+(?:async\s+)?(\w+)\s*\(([^)]*)\)\s*(?::\s*([\w<>|[\]\s,]+?))?\s*\{/;
+
+/** Java: `public class TodoPage extends BasePage {` (extends is optional). */
+const JAVA_CLASS_REGEX =
+  /(?:public\s+|final\s+|abstract\s+)*class\s+(\w+)(?:\s+extends\s+([\w.]+))?/;
+
+/**
+ * Java: `public Locator titleField(String name) throws IOException {`.
+ * Captures return type, name and params for public/protected members only.
+ */
+const JAVA_METHOD_REGEX =
+  /^\s+(?:public|protected)\s+(?:static\s+|final\s+|synchronized\s+)*([\w.<>,\[\]?\s]+?)\s+(\w+)\s*\(([^)]*)\)\s*(?:throws\s+[\w.,\s]+)?\{/;
 
 async function walkDirectory(dir: string, ext: string): Promise<string[]> {
   const results: string[] = [];
@@ -146,12 +158,15 @@ export async function listPageObjects(
   paths: ProjectPaths,
   _input: ListPageObjectsInput,
 ): Promise<PageObjectInfo[]> {
-  const files = await walkDirectory(paths.pages, '.ts');
+  const isJava = paths.language === 'java';
+  const files = await walkDirectory(paths.pages, isJava ? '.java' : '.ts');
   const results: PageObjectInfo[] = [];
 
   for (const file of files) {
     try {
-      const info = await parsePageObjectFile(file, paths.root);
+      const info = isJava
+        ? await parseJavaPageObjectFile(file, paths.root)
+        : await parsePageObjectFile(file, paths.root);
       if (info) results.push(info);
     } catch {
       // Skip files that can't be parsed
@@ -159,4 +174,57 @@ export async function listPageObjects(
   }
 
   return results;
+}
+
+/**
+ * Java flavour of the parser: classes need not extend anything (a page object
+ * that only wraps a Playwright Page is still worth listing), and methods carry
+ * an explicit return type before the name.
+ */
+async function parseJavaPageObjectFile(
+  filePath: string,
+  projectRoot: string,
+): Promise<PageObjectInfo | null> {
+  const content = await fs.readFile(filePath, 'utf8');
+  const lines = content.split('\n');
+
+  let className = '';
+  let extendsClass = '';
+  let classLineIndex = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (line.trim().startsWith('*') || line.trim().startsWith('//')) continue;
+    const classMatch = JAVA_CLASS_REGEX.exec(line);
+    if (classMatch) {
+      className = classMatch[1] ?? '';
+      extendsClass = classMatch[2] ?? '';
+      classLineIndex = i;
+      break;
+    }
+  }
+
+  if (!className || classLineIndex === -1) return null;
+
+  const methods: MethodInfo[] = [];
+  for (let i = classLineIndex + 1; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const methodMatch = JAVA_METHOD_REGEX.exec(line);
+    if (!methodMatch) continue;
+
+    const returnType = (methodMatch[1] ?? '').trim();
+    const name = methodMatch[2] ?? '';
+    const params = (methodMatch[3] ?? '').trim();
+
+    // A constructor has no return type, so it never matches; guard anyway.
+    if (name === className) continue;
+    methods.push({ name, params, returnType: returnType || 'void' });
+  }
+
+  return {
+    className,
+    file: path.relative(projectRoot, filePath),
+    extends: extendsClass,
+    methods,
+  };
 }

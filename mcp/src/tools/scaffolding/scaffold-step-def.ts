@@ -10,11 +10,17 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import type { ProjectPaths } from '../../project.js';
+import { javaPackageForDir } from '../../java-project.js';
 import {
   renderStepDefTemplate,
   appendStepsToExistingContent,
   type StepInput,
 } from '../../templates/artifact/step-def.js';
+import {
+  appendJavaStepsToExistingContent,
+  javaStepClassName,
+  renderJavaStepDefTemplate,
+} from '../../templates/artifact/step-def-java.js';
 
 export const scaffoldStepDefInputSchema = z.object({
   platform: z
@@ -23,13 +29,18 @@ export const scaffoldStepDefInputSchema = z.object({
   name: z
     .string()
     .min(1)
-    .describe("Base name for the file (without .steps.ts). E.g. 'web' → 'web.steps.ts'."),
+    .describe(
+      "Base name for the file. TypeScript: 'web' → 'web.steps.ts'. Java: 'web' → 'WebSteps.java'.",
+    ),
   steps: z
     .array(
       z.object({
         type: z.enum(['Given', 'When', 'Then']).describe("Step keyword."),
         pattern: z.string().describe("Cucumber expression pattern, e.g. 'I navigate to {string}'."),
-        body: z.string().optional().describe("Optional implementation body (TypeScript code)."),
+        body: z
+          .string()
+          .optional()
+          .describe("Optional implementation body (TypeScript, or Java in a Java project)."),
         paramNames: z
           .array(z.string())
           .optional()
@@ -66,9 +77,13 @@ export async function scaffoldStepDef(
   paths: ProjectPaths,
   input: ScaffoldStepDefInput,
 ): Promise<ScaffoldStepDefResult> {
-  const fileName = input.name.endsWith('.steps.ts')
-    ? input.name
-    : `${input.name}.steps.ts`;
+  const isJava = paths.language === 'java';
+  const className = isJava ? javaStepClassName(input.name) : '';
+  const fileName = isJava
+    ? `${className}.java`
+    : input.name.endsWith('.steps.ts')
+      ? input.name
+      : `${input.name}.steps.ts`;
   const filePath = path.join(paths.stepDefinitions, fileName);
 
   const stepInputs: StepInput[] = input.steps.map((s) => ({
@@ -78,6 +93,15 @@ export async function scaffoldStepDef(
     paramNames: s.paramNames,
   }));
 
+  const packageName = isJava
+    ? javaPackageForDir(paths.javaModule ?? paths.root, paths.stepDefinitions)
+    : '';
+  const render = (): string =>
+    isJava
+      ? renderJavaStepDefTemplate({ packageName, className, platform: input.platform }, stepInputs)
+      : renderStepDefTemplate(input.platform, stepInputs);
+  const stepCountRegex = isJava ? /^\s*@(Given|When|Then)\(/gm : /^(Given|When|Then)\(/gm;
+
   let content: string;
   let created = false;
   let stepsAdded = stepInputs.length;
@@ -86,20 +110,22 @@ export async function scaffoldStepDef(
     await fs.access(filePath);
     // File exists
     if (input.overwrite) {
-      content = renderStepDefTemplate(input.platform, stepInputs);
+      content = render();
       created = false;
     } else {
       const existing = await fs.readFile(filePath, 'utf8');
-      const originalCount = (existing.match(/^(Given|When|Then)\(/gm) ?? []).length;
-      content = appendStepsToExistingContent(existing, stepInputs);
-      const newCount = (content.match(/^(Given|When|Then)\(/gm) ?? []).length;
+      const originalCount = (existing.match(stepCountRegex) ?? []).length;
+      content = isJava
+        ? appendJavaStepsToExistingContent(existing, stepInputs)
+        : appendStepsToExistingContent(existing, stepInputs);
+      const newCount = (content.match(stepCountRegex) ?? []).length;
       stepsAdded = newCount - originalCount;
       created = false;
     }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
     // File doesn't exist — create it
-    content = renderStepDefTemplate(input.platform, stepInputs);
+    content = render();
     created = true;
   }
 

@@ -157,11 +157,12 @@ public class JavaFxDriver {
         }
 
         public void fill(String value) {
+            client.performAction(selector, "clear", null);
             client.performAction(selector, "fill", value);
         }
 
         public void selectOption(String value) {
-            client.performAction(selector, "selectOption", value);
+            client.performAction(selector, "select", value);
         }
 
         public void setText(String value) {
@@ -169,10 +170,44 @@ public class JavaFxDriver {
         }
 
         public void waitFor(WaitOptions opts) {
-            String condition = "hidden".equals(opts.state()) ? "hidden" : "visible";
+            String state = opts.state() != null ? opts.state() : "visible";
             int timeout = opts.timeoutMs() != null ? opts.timeoutMs()
                     : config.defaultTimeoutMs() != null ? config.defaultTimeoutMs() : 10_000;
-            client.waitForElement(selector, condition, timeout);
+            int pollIntervalMs = config.pollIntervalMs() != null ? config.pollIntervalMs() : 200;
+            long deadline = System.currentTimeMillis() + timeout;
+
+            while (true) {
+                if (matchesState(state)) {
+                    return;
+                }
+                if (System.currentTimeMillis() >= deadline) {
+                    throw new IllegalStateException(
+                            "Timed out after " + timeout + "ms waiting for " + selector + " to be " + state);
+                }
+                try {
+                    Thread.sleep(pollIntervalMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Interrupted waiting for " + selector, ie);
+                }
+            }
+        }
+
+        private boolean matchesState(String state) {
+            FxAgentClient.ElementNode node;
+            try {
+                List<FxAgentClient.ElementNode> elements = client.queryNode(selector).elements();
+                node = (elements == null || elements.isEmpty()) ? null : elements.get(0);
+            } catch (RuntimeException e) {
+                node = null;
+            }
+            return switch (state) {
+                case "hidden" -> node == null || !node.visible();
+                case "disabled" -> node != null && !node.enabled();
+                case "enabled" -> node != null && node.visible() && node.enabled();
+                case "attached" -> node != null;
+                default -> node != null && node.visible();
+            };
         }
     }
 }

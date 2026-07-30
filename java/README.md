@@ -64,38 +64,41 @@ Suites and what they run (mirrors `example/cucumber.js`'s profiles):
   you may need the OS package list Playwright prints if a browser fails to
   launch (`libwoff1`, `libgstreamer-plugins-bad1.0-0`, etc. — see the error
   message, it's copy-pasteable).
-- **Mobile**: the `maestro` CLI on `PATH` and a running emulator/device.
+- **Mobile**: the `maestro` CLI on `PATH` and a running emulator/device with
+  the app installed. On a *physical* device, `localhost`/`10.0.2.2` don't
+  reach the host — build the APK against the host's LAN IP:
+  `cd apps/mobile && flutter build apk --debug -t lib/main.dart --dart-define=API_BASE_URL=http://<host-ip>:3000/api`
+  then `adb install -r build/app/outputs/flutter-apk/app-debug.apk`.
 - **Desktop (JavaFX)**: `apps/desktop` built (its Gradle `shadowJar` task)
-  and `fxagent.jar` present at `apps/desktop/agent/fxagent.jar`.
+  and `fxagent.jar` present at `apps/desktop/agent/fxagent.jar`. Run with
+  `API_BASE_URL_FOR_DESKTOP=http://localhost:3000/api` — the app expects the
+  `/api` suffix, which `config.api.baseUrl` doesn't carry.
 - **Flutter Desktop**: `apps/mobile` built for macOS
-  (`npm run flutter:build:macos` from the repo root).
+  (`npm run flutter:build:macos` from the repo root). Rebuild it whenever
+  `apps/mobile/lib` changes — a stale `.app` fails with
+  `unknown action "…"` from the driver-extension handler.
 
 ## Status
 
-Validated **end-to-end in CI-equivalent conditions** (local Postgres +
-`apps/server` + real headless Chromium, no mocks):
+Validated **end-to-end against the real apps** (local Postgres +
+`apps/server` + real headless Chromium + a real Android device + the JavaFX
+and Flutter macOS builds, no mocks):
 
-- ✅ `ApiSuiteTest` — 8/8 `@api` scenarios pass against a live `apps/server`.
-- ✅ `WebSuiteTest` — 9/9 `@web` scenarios pass with real browser automation
-  (login, CRUD, screenshots embedded into the Cucumber report).
+- ✅ `ApiSuiteTest` — 8/8 `@api` scenarios.
+- ✅ `WebSuiteTest` — 9/9 `@web` scenarios with real browser automation.
+- ✅ `DesktopSuiteTest` — 8/8 `@desktop` scenarios against a live
+  `fxagent.jar`.
+- ✅ `FlutterDesktopSuiteTest` — 5/5 `@flutter-desktop` scenarios.
+- ✅ `MobileSuiteTest` — 8/8 `@mobile` scenarios via Maestro on a device.
+- ✅ `CrossPlatformSuiteTest` — 10/10 `@cross-platform` scenarios.
 - ✅ `conductor-core` unit tests (`ConfigLoaderTest`) — deep-merge and
   environment-overlay precedence verified.
 
-Not yet exercised end-to-end (code is written and compiles, but needs
-infrastructure this environment didn't have — an Android emulator/Maestro
-install, a built `apps/desktop` jar + `fxagent.jar`, a macOS Flutter build):
-
-- `MobileSuiteTest` (`@mobile`)
-- `DesktopSuiteTest` (`@desktop`, JavaFX via `fxagent.jar`)
-- `FlutterDesktopSuiteTest` (`@flutter-desktop`)
-- `CrossPlatformSuiteTest` (`@cross-platform` — needs Maestro)
-
-`JavaFxDriver`'s action/condition vocabulary (`"click"`, `"fill"`,
-`"selectOption"`, `"setText"`, wait states `"visible"`/`"hidden"`) was
-inferred from `mcp/src/tools/desktop/fxagent-client.ts` and the real call
-patterns in `example/step-definitions/desktop.steps.ts` — it has not been
-verified against a running `fxagent.jar`, since `fxagent`'s own source isn't
-vendored in this repo. Validate this before relying on `DesktopSuiteTest`.
+`JavaFxDriver`'s vocabulary is now verified against a running `fxagent.jar`
+(v0.3.0): actions are `"click"`, `"clear"`, `"fill"`, `"select"`,
+`"setText"`, and waits are polled client-side via
+`POST /api/v1/elements/query` — the agent's `/api/v1/elements/wait` cannot
+express `hidden`/absent states (it 500s when nothing matches).
 
 `RemoteScenarioFetcher`/CLI equivalent (fetching scenarios from the requ
 scenario API) was intentionally not ported — lower priority, not exercised by

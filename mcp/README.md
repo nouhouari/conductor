@@ -108,7 +108,7 @@ Tools are grouped by category. For inputs and outputs, see [Tool Reference](#too
 | `list_page_objects` | Parse page objects and return classes, methods, and signatures |
 | `list_maestro_flows` | List Maestro YAML flows, env vars, and step commands |
 | `list_features` | Parse feature files and return scenarios with their steps and tags |
-| `get_conductor_api` | Get markdown reference for ConductorWorld, drivers, and BasePage |
+| `get_conductor_api` | Get markdown reference for ConductorWorld, drivers, and BasePage (TypeScript or Java, matching the detected project) |
 | `get_config` | Return the resolved environment config and active env vars |
 
 ### Scaffolding (5 tools)
@@ -117,7 +117,7 @@ Tools are grouped by category. For inputs and outputs, see [Tool Reference](#too
 |---|---|
 | `init_project` | Bootstrap a brand-new test project from scratch |
 | `scaffold_feature` | Create a new Gherkin feature file with the right platform tag |
-| `scaffold_step_def` | Create or append step definitions in idiomatic TypeScript |
+| `scaffold_step_def` | Create or append step definitions in idiomatic TypeScript or Java |
 | `scaffold_page_object` | Create a page object class extending BasePage |
 | `scaffold_maestro_flow` | Create a Maestro YAML flow for mobile testing |
 
@@ -125,7 +125,45 @@ Tools are grouped by category. For inputs and outputs, see [Tool Reference](#too
 
 | Tool | Purpose |
 |---|---|
-| `dry_run_scenario` | Run `cucumber-js --dry-run` and report undefined steps |
+| `dry_run_scenario` | Run a Cucumber dry-run (`cucumber-js`, or Cucumber-JVM for Java) and report undefined steps |
+
+## Java Projects
+
+Conductor ships both a TypeScript implementation and a Java (Maven + Cucumber-JVM) port, and
+every tool works with either. The server detects the language automatically:
+
+| Language | Marker |
+|---|---|
+| TypeScript | a `cucumber.js` at the project root |
+| Java | a `pom.xml` whose `src/test/java` contains `@Given`/`@When`/`@Then` glue or a JUnit `@Suite` with `@IncludeEngines("cucumber")` |
+
+When both are found while searching upwards, the **closest** one to the current directory wins —
+so a Java module nested inside a repo whose root has a `cucumber.js` still resolves as Java.
+Pass `projectPath` on any tool call to be explicit.
+
+For a Java project the server reads the layout back out of the project itself:
+
+- **features** — from `@ConfigurationParameter(key = FEATURES_PROPERTY_NAME, ...)` on the suite
+  classes (the common ancestor of all declared paths), falling back to `src/test/resources/features`.
+- **glue / step definitions** — the package containing the annotated step methods.
+- **page objects** — the `pages` package.
+- **config** — `src/test/resources/config/default.yml` plus the `${TEST_ENV}.yml` overlay, with
+  `${project.basedir}` substituted. Environment variables still take precedence.
+
+What changes per tool:
+
+| Tool | Java behaviour |
+|---|---|
+| `list_steps` | Parses `@Given`/`@When`/`@Then` annotations in `*.java`. |
+| `list_page_objects` | Parses Java classes and their `public`/`protected` method signatures. |
+| `scaffold_step_def` | Writes `<Name>Steps.java` into the glue package — an annotated class with `ConductorWorld` constructor injection. Method names are derived from the pattern. |
+| `scaffold_page_object` | Writes `<Name>Page.java` extending `BasePage`, with `Locator` fields and a `(Page, EnvironmentConfig)` constructor. Write `signature` in Java, e.g. `void login(String email, String password)`. |
+| `dry_run_scenario` | Runs `mvn test-compile`, resolves the test classpath, then runs Cucumber-JVM's CLI in dry-run mode. Slower than the TypeScript path — expect a Maven build. |
+| `get_conductor_api` | Returns the Java API reference (synchronous API, `world.page()` accessors, JUnit Platform suites). |
+| `init_project` | Pass `language: "java"` to generate a Maven project: `pom.xml`, JUnit Platform suite classes, YAML config, Java step definitions and page objects. |
+
+Requires JDK 17+ and Maven on `PATH`. `dry_run_scenario` uses `./mvnw` when the project (or its
+parent) ships a wrapper.
 
 ## Tool Reference
 

@@ -125,6 +125,51 @@ export class FxAgentClient {
     });
   }
 
+  /**
+   * Poll `/api/v1/elements/query` client-side until `selector` reaches `state`.
+   *
+   * fxagent's own `/api/v1/elements/wait` can only ever *find* an element: when
+   * nothing matches it answers HTTP 500 (`INTERNAL_ERROR … parameter obj is
+   * null`), so it cannot express `hidden`/`disabled`/absent. Verified against
+   * fxagent 0.3.0. The npm `javafx-driver` package polls the query endpoint for
+   * exactly this reason — we mirror that here.
+   *
+   * @returns the matching element, or `null` for states satisfied by absence.
+   */
+  async waitForState(
+    selector: string,
+    state: 'visible' | 'hidden' | 'enabled' | 'disabled' | 'exists',
+    timeoutMs: number,
+    pollIntervalMs = 200,
+  ): Promise<{ satisfied: boolean; element: ElementNode | null }> {
+    const deadline = Date.now() + timeoutMs;
+    let last: ElementNode | null = null;
+
+    for (;;) {
+      last = await this.firstMatch(selector);
+      if (matchesState(last, state)) {
+        return { satisfied: true, element: last };
+      }
+      if (Date.now() >= deadline) {
+        return { satisfied: false, element: last };
+      }
+      await delay(Math.min(pollIntervalMs, Math.max(0, deadline - Date.now())));
+    }
+  }
+
+  /** Single-element query; returns null when the selector matches nothing. */
+  private async firstMatch(selector: string): Promise<ElementNode | null> {
+    try {
+      const response = await this.queryElements(selector, 1);
+      return response.elements?.[0] ?? null;
+    } catch (err) {
+      // A selector that matches nothing may surface as a protocol error
+      // depending on the agent build — treat it as "not present".
+      if (err instanceof FxAgentProtocolError) return null;
+      throw err;
+    }
+  }
+
   async captureScreenshot(opts: {
     selector?: string;
     windowIndex?: number;
@@ -197,4 +242,28 @@ export class FxAgentClient {
       clearTimeout(timer);
     }
   }
+}
+
+/** Whether a query result satisfies a wait state. */
+function matchesState(
+  element: ElementNode | null,
+  state: 'visible' | 'hidden' | 'enabled' | 'disabled' | 'exists',
+): boolean {
+  switch (state) {
+    case 'visible':
+      return element !== null && element.visible;
+    case 'hidden':
+      // Satisfied both by an absent node and by a present-but-invisible one.
+      return element === null || !element.visible;
+    case 'enabled':
+      return element !== null && element.visible && element.enabled;
+    case 'disabled':
+      return element !== null && !element.enabled;
+    case 'exists':
+      return element !== null;
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

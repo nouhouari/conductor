@@ -14,6 +14,14 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import {
+  findJavaProjectDown,
+  findJavaProjectUp,
+  resolveJavaLayout,
+} from './java-project.js';
+
+/** Implementation language of the resolved Conductor project. */
+export type ProjectLanguage = 'typescript' | 'java';
 
 /** Canonical directory layout for a Conductor consumer project. */
 export interface ProjectPaths {
@@ -22,6 +30,20 @@ export interface ProjectPaths {
   readonly stepDefinitions: string;
   readonly pages: string;
   readonly flows: string;
+  /**
+   * Which implementation the project uses. TypeScript projects are keyed by
+   * cucumber.js; Java projects by a Maven module with src/test/java glue.
+   */
+  readonly language: ProjectLanguage;
+  /**
+   * Java only: the Maven module directory holding src/test/java (equal to
+   * `root` for a single-module project, a subdirectory for a reactor build),
+   * and the base package of the step-definition glue.
+   */
+  readonly javaModule?: string;
+  readonly javaBasePackage?: string;
+  /** Java only: glue packages declared by the suite classes. */
+  readonly javaGluePackages?: readonly string[];
 }
 
 /**
@@ -174,12 +196,17 @@ function buildResolvedConfig(projectRoot: string, flowsDir: string): ResolvedCon
 /**
  * Resolve the project context from a starting directory.
  *
+ * TypeScript projects (cucumber.js) win when both are present, since that's the
+ * marker the tools historically keyed on. A Maven module carrying Cucumber-JVM
+ * glue is resolved as a Java project — see ./java-project.ts.
+ *
  * @param cwd          - Fallback starting directory (typically process.cwd()).
  * @param projectPath  - Optional explicit project root. When set, skips the
  *                       up/down search and uses this path directly (after
- *                       verifying cucumber.js exists there). Lets callers
- *                       (e.g., an AI assistant) point the server at the right
- *                       project in monorepos that don't match the heuristics.
+ *                       verifying it is a TypeScript or Java Conductor
+ *                       project). Lets callers (e.g., an AI assistant) point
+ *                       the server at the right project in monorepos that
+ *                       don't match the heuristics.
  */
 export async function resolveProjectContext(
   cwd: string,
@@ -192,10 +219,31 @@ export async function resolveProjectContext(
     if (await fileExists(path.join(explicit, 'cucumber.js'))) {
       root = explicit;
     } else {
+      const javaModule = await findJavaProjectUp(explicit, 1);
+      if (javaModule !== null) return resolveJavaContext(javaModule);
       return { isInitialized: false, cwd: explicit };
     }
   } else {
-    root = (await findProjectRootUp(cwd)) ?? (await findProjectRootDown(cwd));
+    // Both searches walk up from cwd. When a repo has a TypeScript project at
+    // its root and a Java module in a subdirectory (this repo, for one), the
+    // nearest match must win — otherwise the root cucumber.js shadows the Java
+    // module the caller is actually sitting in. A longer path is a deeper, and
+    // therefore closer, ancestor.
+    const tsRoot = await findProjectRootUp(cwd);
+    const javaRoot = await findJavaProjectUp(cwd, SEARCH_DEPTH);
+
+    if (tsRoot !== null && javaRoot !== null) {
+      if (javaRoot.length > tsRoot.length) return resolveJavaContext(javaRoot);
+      root = tsRoot;
+    } else if (javaRoot !== null) {
+      return resolveJavaContext(javaRoot);
+    } else {
+      root = tsRoot ?? (await findProjectRootDown(cwd));
+      if (root === null) {
+        const nested = await findJavaProjectDown(cwd);
+        if (nested !== null) return resolveJavaContext(nested);
+      }
+    }
   }
 
   if (root === null) {
@@ -218,6 +266,7 @@ export async function resolveProjectContext(
     stepDefinitions: path.join(root, 'step-definitions'),
     pages: path.join(root, 'pages'),
     flows: path.join(root, flowsDir),
+    language: 'typescript',
   };
 
   const config = buildResolvedConfig(root, flowsDir);
@@ -225,11 +274,43 @@ export async function resolveProjectContext(
   return { isInitialized: true, paths, config };
 }
 
+/** Build the context for a detected Conductor Java (Maven) module. */
+async function resolveJavaContext(moduleDir: string): Promise<ProjectContextResult> {
+  const layout = await resolveJavaLayout(moduleDir);
+
+  const paths: ProjectPaths = {
+    root: layout.module,
+    features: layout.features,
+    stepDefinitions: layout.stepDefinitions,
+    pages: layout.pages,
+    flows: layout.flows ?? path.join(layout.module, 'flows', 'mobile'),
+    language: 'java',
+    javaModule: layout.module,
+    javaBasePackage: layout.basePackage,
+    javaGluePackages: layout.gluePackages,
+  };
+
+  const base = buildResolvedConfig(layout.module, paths.flows);
+
+  const config: ResolvedConfig = {
+    ...base,
+    // YAML config is the Java equivalent of config/environments/*.ts; env vars
+    // still win, matching ConfigLoader's precedence.
+    webBaseUrl: process.env['WEB_BASE_URL'] ?? layout.webBaseUrl ?? base.webBaseUrl,
+    apiBaseUrl: process.env['API_BASE_URL'] ?? layout.apiBaseUrl ?? base.apiBaseUrl,
+    flowsDir: paths.flows,
+  };
+
+  return { isInitialized: true, paths, config };
+}
+
 /** Error message to return when project is not initialized. */
 export function notInitializedError(cwd: string): string {
   return (
-    `No cucumber.js found at or near "${cwd}" (searched ${SEARCH_DEPTH} levels up and ` +
-    `one level down through common subdirs: ${DOWNWARD_CANDIDATES.join(', ')}). ` +
+    `No Conductor project found at or near "${cwd}" — looked for a TypeScript project ` +
+    `(cucumber.js) and a Java project (pom.xml with Cucumber-JVM glue under src/test/java), ` +
+    `searching ${SEARCH_DEPTH} levels up and down through common subdirs ` +
+    `(${DOWNWARD_CANDIDATES.join(', ')}). ` +
     `Either: (1) run init_project to bootstrap a new Conductor project here, ` +
     `(2) pass projectPath="<absolute path>" on this tool call to point the server at an existing project, ` +
     `or (3) restart the MCP server from inside the project root.`

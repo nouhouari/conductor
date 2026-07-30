@@ -843,3 +843,84 @@ describe('Drift check: cucumber.js template vs USER_GUIDE.md §2', { timeout: 10
     assert.ok(templateHasHooksRef, `MCP template does not reference hooks`);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mode 3: Java project mode (cwd = java/conductor-example)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const JAVA_EXAMPLE_DIR = path.join(REPO_ROOT, 'java', 'conductor-example');
+
+describe('Mode 3: Java project mode (cwd = java/conductor-example)', { timeout: 60_000 }, () => {
+  let client: McpClient;
+
+  before(async () => {
+    client = new McpClient(JAVA_EXAMPLE_DIR);
+    await client.connect();
+  });
+
+  after(async () => {
+    await client.close();
+  });
+
+  it('get_config reports the Java module as the project root', async () => {
+    const { data, isError } = await client.call<{ projectRoot?: string; paths?: { language?: string } }>(
+      'get_config',
+      {},
+    );
+    assert.ok(!isError, `Expected success, got error: ${JSON.stringify(data)}`);
+    const serialised = JSON.stringify(data);
+    assert.ok(
+      serialised.includes('conductor-example'),
+      `Expected the Java module in the config output. Got: ${serialised.slice(0, 400)}`,
+    );
+  });
+
+  it('list_steps parses @Given/@When/@Then annotations from .java files', async () => {
+    const { data, isError } = await client.call<
+      { pattern: string; type: string; file: string; line: number }[]
+    >('list_steps', {});
+    assert.ok(!isError, `Expected success, got error: ${JSON.stringify(data)}`);
+    assert.ok(Array.isArray(data), 'Expected an array');
+    assert.ok(data.length >= 10, `Expected ≥10 Java steps, got ${data.length}`);
+
+    for (const step of data) {
+      assert.ok(step.file.endsWith('.java'), `Expected only .java files, got ${step.file}`);
+      assert.ok(['Given', 'When', 'Then'].includes(step.type), `Invalid type: ${step.type}`);
+    }
+
+    const webStep = data.find((s) => s.file.includes('WebSteps'));
+    assert.ok(webStep, `No step found from WebSteps.java. Files: ${[...new Set(data.map((s) => s.file))].join(', ')}`);
+  });
+
+  it('list_steps extracts parameter types from Java patterns', async () => {
+    const { data } = await client.call<{ pattern: string; paramTypes: string[] }[]>('list_steps', {
+      q: 'password',
+    });
+    const step = data.find((s) => s.pattern.includes('{string}'));
+    assert.ok(step, `Expected a parameterised step. Got: ${JSON.stringify(data).slice(0, 300)}`);
+    assert.ok(step.paramTypes.length > 0, 'Expected at least one paramType');
+  });
+
+  it('list_page_objects parses Java page classes and their methods', async () => {
+    const { data, isError } = await client.call<
+      { className: string; file: string; extends: string; methods: { name: string }[] }[]
+    >('list_page_objects', {});
+    assert.ok(!isError, `Expected success, got error: ${JSON.stringify(data)}`);
+    assert.ok(data.length >= 1, `Expected ≥1 Java page object, got ${data.length}`);
+
+    const todoPage = data.find((p) => p.className === 'TodoPage');
+    assert.ok(todoPage, `Expected TodoPage. Got: ${data.map((p) => p.className).join(', ')}`);
+    assert.ok(todoPage.file.endsWith('.java'), `Expected a .java file, got ${todoPage.file}`);
+    assert.equal(todoPage.extends, 'BasePage');
+    assert.ok(
+      todoPage.methods.some((m) => m.name === 'createTodo'),
+      `Expected a createTodo method. Got: ${todoPage.methods.map((m) => m.name).join(', ')}`,
+    );
+  });
+
+  it('list_features finds the feature files referenced by the suite classes', async () => {
+    const { data, isError } = await client.call<{ path: string }[]>('list_features', {});
+    assert.ok(!isError, `Expected success, got error: ${JSON.stringify(data)}`);
+    assert.ok(data.length > 0, 'Expected at least one feature file');
+  });
+});
