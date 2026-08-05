@@ -53,6 +53,7 @@ Suites and what they run (mirrors `example/cucumber.js`'s profiles):
 | `DesktopSuiteTest` | `@desktop` | `example/features/desktop` |
 | `FlutterDesktopSuiteTest` | `@flutter-desktop` | `example/features/flutter-desktop` |
 | `CrossPlatformSuiteTest` | `@cross-platform` | `example/features/**` |
+| `RemoteSuiteTest` | none | `.remote-features` (fetched, see below) |
 
 ### Prerequisites per suite
 
@@ -91,8 +92,13 @@ and Flutter macOS builds, no mocks):
 - ✅ `FlutterDesktopSuiteTest` — 5/5 `@flutter-desktop` scenarios.
 - ✅ `MobileSuiteTest` — 8/8 `@mobile` scenarios via Maestro on a device.
 - ✅ `CrossPlatformSuiteTest` — 10/10 `@cross-platform` scenarios.
-- ✅ `conductor-core` unit tests (`ConfigLoaderTest`) — deep-merge and
-  environment-overlay precedence verified.
+- ✅ `RemoteSuiteTest` — 9/9 scenarios sourced from a live scenario API,
+  fetched and reconstructed into `.feature` files, then executed against a
+  real browser.
+- ✅ `conductor-core` unit tests (`ConfigLoaderTest`,
+  `RemoteScenarioFetcherTest`) — deep-merge and environment-overlay
+  precedence, plus remote-scenario query building, error surfacing, tag
+  recovery and file reconstruction.
 
 `JavaFxDriver`'s vocabulary is now verified against a running `fxagent.jar`
 (v1.0.0, package `com.hin.fxagent`; the wire protocol is unchanged from the
@@ -101,9 +107,10 @@ earlier v0.3.0 build): actions are `"click"`, `"clear"`, `"fill"`, `"select"`,
 `POST /api/v1/elements/query` — the agent's `/api/v1/elements/wait` cannot
 express `hidden`/absent states (it 500s when nothing matches).
 
-`RemoteScenarioFetcher`/CLI equivalent (fetching scenarios from the requ
-scenario API) was intentionally not ported — lower priority, not exercised by
-current CI either.
+`RemoteScenarioFetcher` and its CLI are ported (see "Remote scenarios" below):
+scenario fetching, feature-file reconstruction and the `remote` suite all have
+Java equivalents, verified to produce byte-identical `.feature` output to the
+TypeScript implementation for the same API payload.
 
 ## Config
 
@@ -115,3 +122,41 @@ side apply: `WEB_BASE_URL`, `API_BASE_URL`, `HEADLESS`, `BROWSER`,
 `MAESTRO_DEVICE`, `FLUTTER_DESKTOP_APP_PATH`, `FLUTTER_DESKTOP_VM_PORT`, plus
 `TEST_ENV` itself (readable as either a system property `-DTEST_ENV=dev` or an
 env var).
+
+## Remote scenarios
+
+Java port of `src/scenarios/RemoteScenarioFetcher.ts` and `src/scenarios/cli.ts`
+— sources scenarios from the requ scenario API and reconstructs them into
+`.feature` files on disk, so Cucumber (which only reads filesystem globs) can
+run them without touching `example/features/`.
+
+Configure a `remoteScenarios` block in `config/*.yml` (or override it with the
+same `REMOTE_SCENARIOS_*` env vars the TS side uses — `REMOTE_SCENARIOS_URL`,
+`_PROJECT`, `_OUTPUT_DIR`, `_STORY`, `_REQUIREMENT`, `_PHASE`, `_MODE`,
+`_TAGS`, `_FEATURE`, `_Q`, `_VALID`):
+
+```yaml
+remoteScenarios:
+  baseUrl: http://localhost:8788/api
+  project: demo
+  outputDir: .remote-features
+  filters:
+    tags: "@web"
+```
+
+Fetch, then run — the Java equivalent of `npm run test:remote`:
+
+```bash
+# 1. fetch + reconstruct .feature files  (equivalent of `npm run fetch:remote`)
+mvn -pl conductor-core exec:java \
+  -Dexec.mainClass=com.nouhouari.conductor.scenarios.FetchFeaturesCli
+
+# 2. run them
+mvn -pl conductor-example test -Dtest=RemoteSuiteTest
+```
+
+Filtering happens server-side at fetch time; a local
+`-Dcucumber.filter.tags` expression still works on top. Feature-level tags
+(e.g. `@web`) are recovered as the tags common to every scenario in a feature
+that do not appear on that scenario's own tag lines, and re-emitted above
+`Feature:` so tag filters and suites keep matching.
