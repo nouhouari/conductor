@@ -210,24 +210,43 @@ this.db               // ← throws unless you registered an adapter
 
 ## 6. Writing tests with AI assistance
 
-If you use Claude Code, Cursor, or Continue, **conductor-mcp** gives these AI assistants a structured tool surface to bootstrap projects and write tests using Conductor idioms instead of guessing.
+If you use GitHub Copilot CLI, Claude Code, Cursor, or Continue, **conductor-mcp** gives these AI assistants a structured tool surface to bootstrap projects and write tests using Conductor idioms instead of guessing. Target projects can be **TypeScript** (cucumber-js) or **Java** (Maven + Cucumber-JVM, JDK 17+) — the server detects which and adapts every tool.
 
 ### Setup
 
-Add to `.mcp.json` in your project root (or create it):
+**GitHub Copilot CLI** — add to `~/.copilot/mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "conductor": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@nouhouari/conductor-mcp"],
+      "tools": ["*"]
+    }
+  }
+}
+```
+
+**Claude Code / Cursor** — add to `.mcp.json` in your project root (or create it):
 
 ```json
 {
   "mcpServers": {
     "conductor": {
       "command": "npx",
-      "args": ["-y", "conductor-mcp"]
+      "args": ["-y", "@nouhouari/conductor-mcp"]
     }
   }
 }
 ```
 
-Restart your editor. The Conductor MCP tools are now available in the AI chat.
+The package is published to GitHub Packages, so `@nouhouari:registry=https://npm.pkg.github.com`
+must be in your `.npmrc` along with a token that has the `read:packages` scope. See the
+[conductor-mcp README](../mcp/README.md) for the full install and wire-up matrix.
+
+Restart your editor (or the CLI). The Conductor MCP tools are now available in the AI chat.
 
 ### Flow A: Bootstrap from scratch
 

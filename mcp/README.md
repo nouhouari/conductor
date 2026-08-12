@@ -1,25 +1,93 @@
 # conductor-mcp
 
-**Model Context Protocol server for AI-assisted E2E test authoring with Conductor.** Let AI assistants (Claude Code, Cursor, Continue) bootstrap Conductor test projects and write scenarios without leaving your editor.
+**Model Context Protocol server for AI-assisted E2E test authoring with Conductor.** Let AI assistants (GitHub Copilot CLI, Claude Code, Cursor, Continue) bootstrap Conductor test projects and write scenarios without leaving your editor.
 
 ## What It Does
 
-`conductor-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that gives AI assistants a **structured tool surface** to work with the [conductor-e2e](https://www.npmjs.com/package/conductor-e2e) multi-platform E2E test framework.
+`conductor-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that gives AI assistants a **structured tool surface** to work with the [conductor-e2e](https://github.com/nouhouari/conductor) multi-platform E2E test framework.
 
-With 12 tools across discovery, scaffolding, and validation, it supports two workflows:
+With 18 tools across discovery, scaffolding, validation, and live JavaFX desktop introspection, it supports two workflows. Target projects can be **TypeScript** (cucumber-js) or **Java** (Maven + Cucumber-JVM, JDK 17+) — every tool works with either:
 
 1. **Fresh project**: "Set up an E2E test project for web + API" → AI calls `init_project` once → you run `npm install` → have a dry-run-green project.
 2. **Existing project**: "Add an E2E test for the password reset flow" → AI discovers existing steps and page objects → scaffolds new artifacts → validates without touching unrelated code.
 
 ## Install
 
-```bash
-npm install conductor-mcp
+`conductor-mcp` is published to **GitHub Packages** (not the public npm registry) as
+`@nouhouari/conductor-mcp` by the `release-mcp.yml` workflow, on every `mcp-v*` tag.
+Each release also attaches a `.tgz` tarball to the corresponding
+[GitHub Release](https://github.com/nouhouari/conductor/releases).
+
+Point the `@nouhouari` scope at GitHub Packages first — add to `.npmrc` (project or `~/.npmrc`):
+
+```ini
+@nouhouari:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-Requires Node ≥ 18. (The target project will also need `conductor-e2e` installed; `init_project` handles this automatically for new projects.)
+`GITHUB_TOKEN` must be a personal access token with the `read:packages` scope
+(GitHub Packages requires authentication even for public packages).
+
+Then:
+
+```bash
+npm install @nouhouari/conductor-mcp
+```
+
+Or install straight from a release tarball, with no registry configuration:
+
+```bash
+npm install https://github.com/nouhouari/conductor/releases/download/mcp-v0.2.0/nouhouari-conductor-mcp-0.2.0.tgz
+```
+
+### Prerequisites
+
+| For | Requirement |
+|---|---|
+| The MCP server itself | Node ≥ 18 |
+| TypeScript target projects | `@nouhouari/conductor-e2e` (`init_project` pins it for new projects) |
+| Java target projects | **JDK 17+** (`maven.compiler.release` is `17`) and Maven 3.9+ on `PATH` |
 
 ## Wire Up
+
+### GitHub Copilot CLI
+
+Add to `~/.copilot/mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "conductor": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@nouhouari/conductor-mcp"],
+      "tools": ["*"]
+    }
+  }
+}
+```
+
+Restart the CLI (or run `/mcp` to reload). Copilot requires the explicit `"type": "stdio"`
+and a `"tools"` allow-list — `["*"]` enables all 18 tools.
+
+If you installed the package globally (`npm install -g @nouhouari/conductor-mcp`), you can
+point straight at the shipped `conductor-mcp` bin instead of going through `npx`:
+
+```json
+{
+  "mcpServers": {
+    "conductor": {
+      "type": "stdio",
+      "command": "conductor-mcp",
+      "args": [],
+      "tools": ["*"]
+    }
+  }
+}
+```
+
+> The server resolves the target project from the CLI's working directory, so start Copilot
+> from inside the Conductor project you want to work on (TypeScript or Java — both are detected).
 
 ### Claude Code
 
@@ -30,13 +98,17 @@ Add to `.mcp.json` in your project root:
   "mcpServers": {
     "conductor": {
       "command": "npx",
-      "args": ["-y", "conductor-mcp"]
+      "args": ["-y", "@nouhouari/conductor-mcp"]
     }
   }
 }
 ```
 
 Restart Claude Code. The **Conductor MCP** tools will be available to any AI in that workspace.
+
+> `npx` resolves `@nouhouari/conductor-mcp` from GitHub Packages, so the `.npmrc` scope
+> mapping above must be in place (or the package installed locally, in which case you can use
+> `"command": "node", "args": ["./node_modules/@nouhouari/conductor-mcp/dist/cli.js"]`).
 
 ### Cursor
 
@@ -53,7 +125,7 @@ Add to `~/.continue/config.json`:
       {
         "name": "conductor",
         "command": "npx",
-        "args": ["-y", "conductor-mcp"]
+        "args": ["-y", "@nouhouari/conductor-mcp"]
       }
     ]
   }
@@ -73,6 +145,9 @@ Restart Continue (or your IDE with Continue installed).
 1. Calls `init_project` with `platforms: ['web', 'api']`, `includeSamples: true`.
 2. Tells you to `cd` into the new directory and run `npm install && npx playwright install chromium && npm run test:dry-run`.
 3. Advises you to restart the MCP server so it picks up the new `cucumber.js`.
+
+For a Java project, say *"…using Conductor with Java"* instead: the AI passes `language: 'java'`,
+and step 2 becomes `mvn test-compile` (JDK 17+ and Maven required) — see [Java Projects](#java-projects).
 
 **You get:**
 - A ready-to-extend project with a working feature file, step definitions, and page objects per platform.
@@ -111,7 +186,7 @@ Tools are grouped by category. For inputs and outputs, see [Tool Reference](#too
 | `get_conductor_api` | Get markdown reference for ConductorWorld, drivers, and BasePage (TypeScript or Java, matching the detected project) |
 | `get_config` | Return the resolved environment config and active env vars |
 
-### Scaffolding (5 tools)
+### Scaffolding (6 tools)
 
 | Tool | Purpose |
 |---|---|
@@ -120,12 +195,26 @@ Tools are grouped by category. For inputs and outputs, see [Tool Reference](#too
 | `scaffold_step_def` | Create or append step definitions in idiomatic TypeScript or Java |
 | `scaffold_page_object` | Create a page object class extending BasePage |
 | `scaffold_maestro_flow` | Create a Maestro YAML flow for mobile testing |
+| `remove_samples` | Delete the placeholder sample files written by `init_project` (only unmodified ones, unless `force`) |
 
 ### Validation (1 tool)
 
 | Tool | Purpose |
 |---|---|
 | `dry_run_scenario` | Run a Cucumber dry-run (`cucumber-js`, or Cucumber-JVM for Java) and report undefined steps |
+
+### Desktop Introspection — JavaFX (5 tools)
+
+These talk to a **running** JavaFX app instrumented with `-javaagent:fxagent.jar` (default port
+4567). They are live-UI tools, independent of the target project's language.
+
+| Tool | Purpose |
+|---|---|
+| `explore_desktop_ui` | Dump the live scene-graph tree (types, `#id`, `.styleClass`, text, bounds) |
+| `query_desktop_elements` | Find elements by selector (`#id`, `.class`, `text=`, `text~=`, `TypeName`, `css=`, `ref=`, chained with `>>`) |
+| `perform_desktop_action` | `click`, `dblclick`, `rightclick`, `hover`, `fill`, `clear`, `select`, `focus`, `scroll`, `setText` |
+| `wait_for_desktop_element` | Wait for `exists` / `visible` / `hidden` / `enabled` / `disabled` |
+| `take_desktop_screenshot` | Capture the window or one element (inline PNG, or saved to `savePath`) |
 
 ## Java Projects
 
@@ -162,8 +251,52 @@ What changes per tool:
 | `get_conductor_api` | Returns the Java API reference (synchronous API, `world.page()` accessors, JUnit Platform suites). |
 | `init_project` | Pass `language: "java"` to generate a Maven project: `pom.xml`, JUnit Platform suite classes, YAML config, Java step definitions and page objects. |
 
-Requires JDK 17+ and Maven on `PATH`. `dry_run_scenario` uses `./mvnw` when the project (or its
-parent) ships a wrapper.
+### Java toolchain & versions
+
+`init_project --language java` generates a `pom.xml` whose versions mirror the framework's own
+`java/pom.xml`:
+
+| Component | Version |
+|---|---|
+| Java (`maven.compiler.release`) | **17** (JDK 17+ required; newer JDKs work, bytecode targets 17) |
+| Maven | 3.9+ recommended (any version supporting `maven-compiler-plugin` 3.13.0) |
+| Cucumber-JVM (`cucumber-java`, `cucumber-picocontainer`, `cucumber-junit-platform-engine`) | 7.18.1 |
+| JUnit Jupiter | 5.10.3 |
+| JUnit Platform Suite | 1.10.3 |
+| Allure (`allure-cucumber7-jvm`) | 2.29.0 |
+| AssertJ | 3.26.3 |
+| maven-compiler-plugin / maven-surefire-plugin | 3.13.0 / 3.2.5 |
+| Conductor core | `com.nouhouari.conductor:conductor-core:0.1.0-SNAPSHOT` |
+
+> `conductor-core` is **not yet published to a Maven registry** — only the npm packages have a
+> release workflow. Until then, install it into your local repository from a clone of this repo:
+>
+> ```bash
+> cd java && mvn install    # builds conductor-core + conductor-example, runs unit tests
+> ```
+
+Dependency injection into step classes uses **PicoContainer** (`cucumber-picocontainer`), which is
+why generated step classes take `ConductorWorld` as a constructor parameter.
+
+`dry_run_scenario` uses `./mvnw` when the project (or its parent) ships a wrapper, otherwise `mvn`
+from `PATH`.
+
+Java-only `init_project` inputs:
+
+- `groupId` (default `com.example`)
+- `artifactId` (default: kebab-case of `name`)
+- `basePackage` (default: `<groupId>.<artifactId as a Java identifier>`)
+
+Generated layout:
+
+```
+pom.xml
+src/test/java/<basePackage>/stepdefs/     # @Given/@When/@Then glue
+src/test/java/<basePackage>/pages/        # page objects extending BasePage
+src/test/java/<basePackage>/suites/       # JUnit Platform @Suite classes (one per platform)
+src/test/resources/features/              # .feature files
+src/test/resources/config/default.yml     # + <TEST_ENV>.yml overlay
+```
 
 ## Tool Reference
 
@@ -330,9 +463,12 @@ Example:
 
 **Input:**
 - `path` (string, required): Absolute path to the target directory (created if it doesn't exist).
-- `name` (string, required): Project name (used in `package.json` and README).
-- `platforms` (array of `'web'` | `'api'` | `'mobile'` | `'desktop'` | `'cross-platform'`, required): Which platforms to configure.
-- `includeSamples` (boolean, optional, default `true`): Write starter feature + step-def + page/flow files that pass dry-run.
+- `name` (string, required): Project name (used in `package.json` / `pom.xml` and README).
+- `language` (optional, default `'typescript'`): `'typescript'` (npm + cucumber-js) or `'java'` (Maven + Cucumber-JVM, JDK 17+).
+- `platforms` (array of `'web'` | `'api'` | `'mobile'` | `'desktop'` | `'flutter-desktop'` | `'cross-platform'`, required): Which platforms to configure.
+- `groupId` / `artifactId` / `basePackage` (optional, Java only): Maven coordinates and base Java package.
+- `webBaseUrl` (string, optional): URL of the web app under test; replaces the default in `.env.example` / config.
+- `includeSamples` (boolean, optional, default `false`): Write starter feature + step-def + page/flow files that pass dry-run.
 - `force` (boolean, optional, default `false`): Overwrite if the target directory is non-empty.
 
 **Output:**
@@ -362,8 +498,9 @@ Example:
 ```
 
 **Notes:**
-- Does **not** run `npm install` — that's your step.
-- Depends on `conductor-e2e` being published on npm. The generated `package.json` pins a specific version.
+- Does **not** run `npm install` (or `mvn`) — that's your step.
+- The generated `package.json` pins `@nouhouari/conductor-e2e`, which lives on **GitHub Packages** — the target project needs the `@nouhouari:registry` mapping from [Install](#install).
+- With `language: 'java'` it writes `pom.xml` + JUnit Platform suites instead; run `mvn test-compile` to verify.
 - The `cucumber.js` profile and directory structure match the [User Guide](../docs/USER_GUIDE.md) — use this to bootstrap a fresh project in seconds.
 
 ---
@@ -498,20 +635,24 @@ Example:
 
 ## Requirements
 
-- Node ≥ 18
-- `conductor-e2e` installed in the target project (required for existing-project discovery tools; `init_project` installs it automatically)
+- Node ≥ 18 (the MCP server itself)
+- For TypeScript projects: `@nouhouari/conductor-e2e` installed in the target project (required for existing-project discovery tools; `init_project` pins it in the generated `package.json`)
+- For Java projects: **JDK 17+** and Maven on `PATH` (`dry_run_scenario` runs `./mvnw` or `mvn`)
 - For mobile tests: Maestro CLI installed separately (see [User Guide prerequisites](../docs/USER_GUIDE.md#1-prerequisites))
 - For web tests: Playwright browsers installed (the generated `cucumber.js` includes the `npx playwright install` step)
+- For JavaFX desktop introspection tools: the app under test started with `-javaagent:fxagent.jar` (default port 4567)
 
 ## Notes
 
-- The MCP server starts in **uninitialized mode** if no `cucumber.js` is found — discovery and validation tools return a helpful error, but `init_project` is still callable.
+- The MCP server starts in **uninitialized mode** if neither a `cucumber.js` (TypeScript) nor a Cucumber-JVM `pom.xml` (Java) is found — discovery and validation tools return a helpful error, but `init_project` is still callable.
 - After calling `init_project`, you must run `npm install` and **restart the MCP server** (so the server picks up the new `cucumber.js` and can resolve the project context).
 - The server re-reads the file system on each tool call (no file watchers in v1) — changes are visible immediately without restarting.
 
 ## Resources
 
-- [conductor-e2e on npm](https://www.npmjs.com/package/conductor-e2e)
+- [@nouhouari/conductor-e2e on GitHub Packages](https://github.com/nouhouari/conductor/pkgs/npm/conductor-e2e)
+- [@nouhouari/conductor-mcp on GitHub Packages](https://github.com/nouhouari/conductor/pkgs/npm/conductor-mcp)
+- [Releases](https://github.com/nouhouari/conductor/releases) — downloadable `.tgz` tarballs
 - [User Guide](../docs/USER_GUIDE.md) — full walkthrough of writing and running tests
 - [Repository](https://github.com/nouhouari/conductor)
 - [Model Context Protocol](https://modelcontextprotocol.io)

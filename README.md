@@ -126,7 +126,7 @@ The build uses `lib/main_test.dart` as the entry point (which wires `enableFlutt
 ## Documentation
 
 - [**User Guide**](docs/USER_GUIDE.md) — bootstrap a new E2E project, write scenarios, run tests
-- [**conductor-mcp**](mcp/README.md) — AI-assisted test authoring for Claude Code, Cursor, Continue
+- [**conductor-mcp**](mcp/README.md) — AI-assisted test authoring for GitHub Copilot CLI, Claude Code, Cursor, Continue
 - [**Architecture**](CLAUDE.md) — framework internals (driver lifecycle, hooks, config)
 - [Example project README](example/README.md) — guided tour of the working example
 

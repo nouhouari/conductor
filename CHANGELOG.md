@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs: GitHub Copilot CLI wire-up for `conductor-mcp`** — `mcp/README.md` and `docs/USER_GUIDE.md` now document the `~/.copilot/mcp-config.json` entry (including the Copilot-specific `"type": "stdio"` and `"tools"` allow-list) alongside the existing Claude Code / Cursor / Continue instructions. The user guide's setup snippet was also corrected to the published package name `@nouhouari/conductor-mcp` and now notes the GitHub Packages `.npmrc` requirement and Java target-project support.
+
 ## [conductor-mcp 0.2.0] — 2026-07-30
 
 ### Added
