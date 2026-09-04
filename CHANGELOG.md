@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [conductor-mcp 0.2.1] — 2026-09-04
+
 ### Changed
+
+- **Release workflow publishes to npmjs.org** — `release-mcp.yml` now publishes `@nouhouari/conductor-mcp` to the public npm registry (via the `NPM_TOKEN` repository secret) in addition to GitHub Packages, so `npx @nouhouari/conductor-mcp` works without a GitHub Packages `.npmrc`.
 
 - **Docs: GitHub Copilot CLI wire-up for `conductor-mcp`** — `mcp/README.md` and `docs/USER_GUIDE.md` now document the `~/.copilot/mcp-config.json` entry (including the Copilot-specific `"type": "stdio"` and `"tools"` allow-list) alongside the existing Claude Code / Cursor / Continue instructions. The user guide's setup snippet was also corrected to the published package name `@nouhouari/conductor-mcp` and now notes the GitHub Packages `.npmrc` requirement and Java target-project support.
 

@@ -9,7 +9,7 @@ on:
 
 jobs:
   release-mcp:
-    name: Build, GitHub Release & GitHub Packages publish (conductor-mcp)
+    name: Build, GitHub Release, GitHub Packages & npm publish (conductor-mcp)
     runs-on: ubuntu-latest
     permissions:
       contents: write   # create GitHub Release + upload asset
@@ -65,3 +65,21 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Second registry: public npmjs.org. setup-node rewrites .npmrc so the
+      # NODE_AUTH_TOKEN below is scoped to registry.npmjs.org. The explicit
+      # --registry flag overrides the publishConfig in mcp/package.json, which
+      # points at GitHub Packages. NPM_TOKEN must be a repository secret holding
+      # an npmjs.org automation/granular token with publish rights on the
+      # @nouhouari scope.
+      - name: Set up Node.js (npmjs.org)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npmjs.org
+        working-directory: mcp
+        run: npm publish --registry https://registry.npmjs.org --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
