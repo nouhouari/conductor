@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    name: Build, GitHub Release & publish to GitHub Packages
+    name: Build, GitHub Release, GitHub Packages & npm publish (conductor-e2e)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -49,6 +49,41 @@ jobs:
             nouhouari-conductor-e2e-*.tgz
 
       - name: Publish to GitHub Packages
-        run: npm publish
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION already on GitHub Packages, skipping"
+          else
+            npm publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Second registry: public npmjs.org. setup-node rewrites .npmrc so the
+      # NODE_AUTH_TOKEN below is scoped to registry.npmjs.org. The explicit
+      # --registry flag overrides the publishConfig in package.json, which
+      # points at GitHub Packages. NPM_TOKEN must be a repository secret holding
+      # an npmjs.org automation/granular token with publish rights on the
+      # @nouhouari scope.
+      - name: Set up Node.js (npmjs.org)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npmjs.org
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN repository secret is not set"
+            exit 1
+          fi
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "$NAME@$VERSION already on npmjs.org, skipping"
+          else
+            npm publish --registry https://registry.npmjs.org --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
