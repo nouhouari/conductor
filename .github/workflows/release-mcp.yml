@@ -62,7 +62,14 @@ jobs:
         # rather than the root package.json. GITHUB_TOKEN is automatically
         # available in Actions and grants packages:write for this repo.
         working-directory: mcp
-        run: npm publish
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION already on GitHub Packages, skipping"
+          else
+            npm publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -80,6 +87,17 @@ jobs:
 
       - name: Publish to npmjs.org
         working-directory: mcp
-        run: npm publish --registry https://registry.npmjs.org --access public
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN repository secret is not set"
+            exit 1
+          fi
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "$NAME@$VERSION already on npmjs.org, skipping"
+          else
+            npm publish --registry https://registry.npmjs.org --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
