@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [conductor-e2e 0.1.7] — 2026-10-01
+
+### Changed
+
+- **Release workflow publishes to npmjs.org** — `release.yml` now publishes `@nouhouari/conductor-e2e` to the public npm registry (via the `NPM_TOKEN` repository secret) in addition to GitHub Packages.
+- **Idempotent release publishes** — publish steps in `release.yml` and `release-mcp.yml` skip versions already present on the target registry, so a partially failed release can be re-run.
+
+## [conductor-mcp 0.2.2] — 2026-10-01
+
+### Changed
+
+- Re-release to publish `@nouhouari/conductor-mcp` to npmjs.org with the idempotent release workflow.
+
 ## [conductor-mcp 0.2.1] — 2026-09-04
 
 ### Changed
