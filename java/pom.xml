@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.nouhouari.conductor</groupId>
+  <groupId>io.github.nouhouari.conductor</groupId>
   <artifactId>conductor-java-parent</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0</version>
   <packaging>pom</packaging>
 
   <name>Conductor E2E (Java)</name>
@@ -17,23 +17,30 @@
     <module>conductor-example</module>
   </modules>
 
-  <!--
-    Publishing target for .github/workflows/release-java.yml (tag java-v*).
-    The repository id `github` must match the server-id configured by
-    actions/setup-java, which supplies the credentials at deploy time.
-  -->
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub Packages — nouhouari/conductor</name>
-      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
-    </repository>
-    <snapshotRepository>
-      <id>github</id>
-      <name>GitHub Packages — nouhouari/conductor</name>
-      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
-    </snapshotRepository>
-  </distributionManagement>
+  <url>https://github.com/nouhouari/conductor</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>nouhouari</id>
+      <name>Nourreddine Houari</name>
+      <url>https://github.com/nouhouari</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <url>https://github.com/nouhouari/conductor</url>
+    <connection>scm:git:https://github.com/nouhouari/conductor.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/nouhouari/conductor.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -52,6 +59,10 @@
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
     <exec.maven.plugin.version>3.3.0</exec.maven.plugin.version>
+    <maven.source.plugin.version>3.3.1</maven.source.plugin.version>
+    <maven.javadoc.plugin.version>3.10.1</maven.javadoc.plugin.version>
+    <maven.gpg.plugin.version>3.2.7</maven.gpg.plugin.version>
+    <central.publishing.plugin.version>0.7.0</central.publishing.plugin.version>
   </properties>
 
   <dependencyManagement>
@@ -146,4 +157,81 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <!--
+    Maven Central publishing, used by .github/workflows/release-java.yml
+    (tag java-v*): mvn -P release -pl conductor-core -am deploy.
+    Central requires sources + javadoc jars and GPG signatures. The server id
+    `central` must match the one configured by actions/setup-java; signing
+    reads MAVEN_GPG_PASSPHRASE from the environment.
+  -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>${maven.source.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven.javadoc.plugin.version}</version>
+            <configuration>
+              <doclint>none</doclint>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven.gpg.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>${central.publishing.plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

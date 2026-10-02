@@ -6,11 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [conductor-java 0.2.0] — 2026-10-02
+
+### Changed
+
+- **Published to Maven Central under a new groupId** — the Java port is now `io.github.nouhouari.conductor:conductor-core` (was `com.nouhouari.conductor`, GitHub Packages only). Consumers no longer need a `<repositories>` entry or a `read:packages` token. Java package names (`com.nouhouari.conductor.*`) are unchanged.
+- **`release-java.yml` publishes to Maven Central** — on `java-v*` tags it verifies the tag matches `java/pom.xml` (and refuses `-SNAPSHOT`), builds and tests `conductor-core`, attaches its jars to a GitHub Release, and runs `mvn -P release deploy`. Needs the `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_GPG_PRIVATE_KEY` and `MAVEN_GPG_PASSPHRASE` repository secrets.
+- `java/pom.xml` gained the metadata Central requires (url, license, developers, scm) and a `release` profile: sources + javadoc jars, GPG signing, and `central-publishing-maven-plugin`. The GitHub Packages `<distributionManagement>` was removed.
+
 ### Added
 
 - **CI coverage for the Java port** — `ci.yml` gained a `java` job (temurin JDK 21) that builds and unit-tests `conductor-core`, compiles `conductor-example`'s step definitions and page objects, and runs a Cucumber JVM `--dry-run` over `example/features` with the real glue so undefined/ambiguous steps fail the build. The example's suites need real browsers/devices and are never executed on a hosted runner.
-- **`release-java.yml`** — releases the Java port on `java-v*` tags: verifies the tag matches `java/pom.xml` (and refuses `-SNAPSHOT`), attaches the `conductor-core` jar to a GitHub Release, and deploys the parent POM plus `conductor-core` to GitHub Packages Maven. `conductor-example` sets `maven.deploy.skip=true`.
-- `java/pom.xml` gained `<distributionManagement>` pointing at `https://maven.pkg.github.com/nouhouari/conductor`, and `java/README.md` a "CI & Releasing" section.
+- `java/README.md` gained a "CI & Releasing" section.
+
+## [conductor-mcp 0.2.3] — 2026-10-02
+
+### Changed
+
+- **Java projects resolve `conductor-core` from Maven Central** — `init_project` with `language: "java"` now generates a `pom.xml` depending on `io.github.nouhouari.conductor:conductor-core:0.2.0`, with no GitHub Packages `<repositories>` block or `~/.m2/settings.xml` token step.
 
 ## [conductor-e2e 0.1.7] — 2026-10-01
 

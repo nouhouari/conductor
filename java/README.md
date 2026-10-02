@@ -184,23 +184,35 @@ version first:
 
 ```bash
 cd java
-mvn -B versions:set -DnewVersion=0.1.0 -DgenerateBackupPoms=false
-git commit -am "chore(release): conductor-java 0.1.0"
-git tag java-v0.1.0 && git push --follow-tags
+mvn -B versions:set -DnewVersion=0.2.0 -DgenerateBackupPoms=false
+git commit -am "chore(release): conductor-java 0.2.0"
+git tag java-v0.2.0 && git push --follow-tags
 ```
 
-The workflow then builds `conductor-core`, attaches its jar to a GitHub
-Release, and deploys the parent POM plus `conductor-core` to GitHub Packages
-(`https://maven.pkg.github.com/nouhouari/conductor`). `conductor-example` sets
-`maven.deploy.skip=true` — it is a sample consumer, not a published artifact.
+The workflow builds and tests `conductor-core`, attaches its jars to a GitHub
+Release, then runs `mvn -P release deploy`. The `release` profile adds
+sources and javadoc jars, signs everything with GPG, and publishes the parent
+POM plus `conductor-core` to Maven Central through the Sonatype Central Portal.
+`conductor-example` is not in the deployed reactor — it is a sample consumer,
+not a published artifact.
 
-Consumers add the repository and the dependency:
+Required repository secrets:
+
+| Secret | Value |
+|---|---|
+| `MAVEN_CENTRAL_USERNAME` / `MAVEN_CENTRAL_PASSWORD` | Central Portal user token (central.sonatype.com → View Account → Generate User Token) |
+| `MAVEN_GPG_PRIVATE_KEY` | ASCII-armored private key (`gpg --armor --export-secret-keys <KEY_ID>`) whose public key is on a keyserver |
+| `MAVEN_GPG_PASSPHRASE` | Passphrase of that key |
+
+The `io.github.nouhouari` namespace must be verified on central.sonatype.com.
+
+Consumers only need the dependency:
 
 ```xml
 <dependency>
-  <groupId>com.nouhouari.conductor</groupId>
+  <groupId>io.github.nouhouari.conductor</groupId>
   <artifactId>conductor-core</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 

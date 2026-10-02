@@ -10,11 +10,10 @@ on:
 
 jobs:
   release-java:
-    name: Build, GitHub Release & GitHub Packages publish (conductor-java)
+    name: Build, GitHub Release & Maven Central publish (conductor-java)
     runs-on: ubuntu-latest
     permissions:
       contents: write   # create GitHub Release + upload assets
-      packages: write   # publish to GitHub Packages (Maven)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,11 +24,14 @@ jobs:
           distribution: 'temurin'
           java-version: '21'   # toolchain JDK; sources compile to release 17
           cache: 'maven'
-          # Writes a ~/.m2/settings.xml with a <server> whose id is `github`,
-          # matching the <distributionManagement> repository id in java/pom.xml.
-          server-id: github
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
+          # Writes a ~/.m2/settings.xml with a <server> whose id is `central`,
+          # matching <publishingServerId> in java/pom.xml's release profile,
+          # and imports the signing key for maven-gpg-plugin.
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       # Verify the pushed tag version matches java/pom.xml, and refuse to
       # release a SNAPSHOT. e.g. tag java-v0.1.0 requires <version>0.1.0.
@@ -63,11 +65,22 @@ jobs:
           files: |
             java/conductor-core/target/conductor-core-*.jar
 
-      # Publishes the parent POM + conductor-core to GitHub Packages.
-      # conductor-example sets maven.deploy.skip=true in its own POM.
-      - name: Publish to GitHub Packages
+      # Signs and uploads the parent POM + conductor-core (with sources and
+      # javadoc jars) to the Sonatype Central Portal, then waits until the
+      # deployment is published. conductor-example is not in the reactor.
+      # MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD are a Central Portal
+      # user token (central.sonatype.com → View Account → Generate User Token).
+      - name: Publish to Maven Central
         working-directory: java
-        run: mvn -B -ntp -pl conductor-core -am deploy -DskipTests
+        run: |
+          for s in MAVEN_CENTRAL_USERNAME MAVEN_CENTRAL_PASSWORD MAVEN_GPG_PASSPHRASE; do
+            if [ -z "${!s}" ]; then
+              echo "::error::$s repository secret is not set"
+              exit 1
+            fi
+          done
+          mvn -B -ntp -P release -pl conductor-core -am deploy -DskipTests
         env:
-          MAVEN_USERNAME: ${{ github.actor }}
-          MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
