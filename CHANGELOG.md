@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- **`release-java.yml` no longer fails after a successful Central publish** — bumped `central-publishing-maven-plugin` 0.7.0 → 0.11.0. 0.7.0 could not parse the `warnings` field the Central Portal now returns while polling deployment status, so the job failed even though `conductor-java 0.2.0` was published.
+
 ## [conductor-java 0.2.0] — 2026-10-02
 
 ### Changed
