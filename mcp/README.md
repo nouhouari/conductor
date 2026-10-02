@@ -38,6 +38,13 @@ npm install https://github.com/nouhouari/conductor/releases/download/mcp-v0.2.3/
 
 ## Wire Up
 
+All snippets below run the server through `npx` — no install or token needed. A few rules apply to every client:
+
+- **Use the scoped name** `@nouhouari/conductor-mcp`. The unscoped [`conductor-mcp`](https://www.npmjs.com/package/conductor-mcp) is the pre-rename package, frozen at 0.1.1.
+- **`@latest`** makes `npx` pick up new releases; without a version, `npx` may keep reusing an older cached copy. Pin an exact version instead (e.g. `@nouhouari/conductor-mcp@0.2.3`) if your team wants identical tools for everyone.
+- **Start the client from inside the Conductor project** — the server resolves the target project (TypeScript `cucumber.js` or Java `pom.xml`) from the working directory. Restart it after `init_project` scaffolds a new project.
+- If your `~/.npmrc` maps `@nouhouari:registry` to `https://npm.pkg.github.com` (the pre-0.2.3 setup), remove that line so `npx` resolves from npmjs.org.
+
 ### GitHub Copilot CLI
 
 Add to `~/.copilot/mcp-config.json`:
@@ -48,7 +55,7 @@ Add to `~/.copilot/mcp-config.json`:
     "conductor": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@nouhouari/conductor-mcp"],
+      "args": ["-y", "@nouhouari/conductor-mcp@latest"],
       "tools": ["*"]
     }
   }
@@ -86,7 +93,7 @@ Add to `.mcp.json` in your project root:
   "mcpServers": {
     "conductor": {
       "command": "npx",
-      "args": ["-y", "@nouhouari/conductor-mcp"]
+      "args": ["-y", "@nouhouari/conductor-mcp@latest"]
     }
   }
 }
@@ -113,7 +120,7 @@ Add to `~/.continue/config.json`:
       {
         "name": "conductor",
         "command": "npx",
-        "args": ["-y", "@nouhouari/conductor-mcp"]
+        "args": ["-y", "@nouhouari/conductor-mcp@latest"]
       }
     ]
   }

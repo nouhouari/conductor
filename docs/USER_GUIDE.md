@@ -230,7 +230,7 @@ If you use GitHub Copilot CLI, Claude Code, Cursor, or Continue, **conductor-mcp
     "conductor": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@nouhouari/conductor-mcp"],
+      "args": ["-y", "@nouhouari/conductor-mcp@latest"],
       "tools": ["*"]
     }
   }
@@ -244,7 +244,7 @@ If you use GitHub Copilot CLI, Claude Code, Cursor, or Continue, **conductor-mcp
   "mcpServers": {
     "conductor": {
       "command": "npx",
-      "args": ["-y", "@nouhouari/conductor-mcp"]
+      "args": ["-y", "@nouhouari/conductor-mcp@latest"]
     }
   }
 }
