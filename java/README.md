@@ -21,6 +21,41 @@ status.
   platform tag (the Java equivalent of `example/cucumber.js`'s named
   profiles).
 
+## Using conductor-core in your project
+
+`conductor-core` is published to **Maven Central** as
+[`io.github.nouhouari.conductor:conductor-core`](https://central.sonatype.com/artifact/io.github.nouhouari.conductor/conductor-core),
+so no extra repository or credentials are needed. Requires JDK 17+.
+
+Maven:
+
+```xml
+<dependency>
+  <groupId>io.github.nouhouari.conductor</groupId>
+  <artifactId>conductor-core</artifactId>
+  <version>0.2.0</version>
+  <scope>test</scope>
+</dependency>
+```
+
+Gradle (Kotlin DSL):
+
+```kotlin
+dependencies {
+    testImplementation("io.github.nouhouari.conductor:conductor-core:0.2.0")
+}
+```
+
+Then point Cucumber's glue at the framework hooks plus your own step
+definitions, e.g. `com.nouhouari.conductor.hooks,com.example.stepdefs` (the
+Java package names keep the `com.nouhouari.conductor` prefix). The quickest
+start is the MCP server's `init_project` tool with `language: "java"`, which
+generates a ready-to-run Maven project — see [../mcp/README.md](../mcp/README.md).
+
+> Releases up to 0.1.0 were published only to GitHub Packages under the old
+> `com.nouhouari.conductor` groupId. Switch to `io.github.nouhouari.conductor`
+> and drop any `maven.pkg.github.com` `<repository>` / `settings.xml` token.
+
 ## Build
 
 ```bash

@@ -33,9 +33,30 @@ Scenario: Todo created on web appears on the Flutter mobile app
 
 ## Quick Start
 
+Conductor is published to the public registries — no `.npmrc`, `settings.xml` or tokens needed.
+
+**TypeScript** — [`@nouhouari/conductor-e2e`](https://www.npmjs.com/package/@nouhouari/conductor-e2e) on npmjs.org:
+
 ```bash
-npm install conductor-e2e
+npm install @nouhouari/conductor-e2e
 ```
+
+**Java** — [`io.github.nouhouari.conductor:conductor-core`](https://central.sonatype.com/artifact/io.github.nouhouari.conductor/conductor-core) on Maven Central (see [java/README.md](java/README.md)):
+
+```xml
+<dependency>
+  <groupId>io.github.nouhouari.conductor</groupId>
+  <artifactId>conductor-core</artifactId>
+  <version>0.2.0</version>
+  <scope>test</scope>
+</dependency>
+```
+
+**AI-assisted authoring** — the [`@nouhouari/conductor-mcp`](https://www.npmjs.com/package/@nouhouari/conductor-mcp) MCP server runs straight from npmjs.org with `npx -y @nouhouari/conductor-mcp` (see [mcp/README.md](mcp/README.md)).
+
+> The unscoped npm packages [`conductor-e2e`](https://www.npmjs.com/package/conductor-e2e) (last: 0.1.2) and
+> [`conductor-mcp`](https://www.npmjs.com/package/conductor-mcp) (last: 0.1.1) are the pre-rename names and are no
+> longer updated — use the `@nouhouari/` scoped packages above.
 
 See the [**User Guide**](docs/USER_GUIDE.md) for a step-by-step walkthrough of bootstrapping a new E2E project from scratch.
 

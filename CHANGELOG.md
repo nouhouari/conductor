@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs: install from the public registries** — `README.md`, `docs/USER_GUIDE.md` and `java/README.md` now install `@nouhouari/conductor-e2e` / `@nouhouari/conductor-mcp` from npmjs.org and `io.github.nouhouari.conductor:conductor-core` from Maven Central (Maven + Gradle snippets), with no `.npmrc`, `settings.xml` or token. The user guide's install command, imports and hooks `require.resolve` path use the scoped `@nouhouari/conductor-e2e` name, and the README flags the unscoped `conductor-e2e` / `conductor-mcp` packages as the frozen pre-rename names.
+
 ### Fixed
 
 - **`release-java.yml` no longer fails after a successful Central publish** — bumped `central-publishing-maven-plugin` 0.7.0 → 0.11.0. 0.7.0 could not parse the `warnings` field the Central Portal now returns while polling deployment status, so the job failed even though `conductor-java 0.2.0` was published.
