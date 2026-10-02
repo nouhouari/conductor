@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 
 - **Java projects resolve `conductor-core` from Maven Central** — `init_project` with `language: "java"` now generates a `pom.xml` depending on `io.github.nouhouari.conductor:conductor-core:0.2.0`, with no GitHub Packages `<repositories>` block or `~/.m2/settings.xml` token step.
+- **Docs: npm install** — `mcp/README.md` now installs `@nouhouari/conductor-mcp` from the public npm registry; the GitHub Packages `.npmrc` / `read:packages` setup is no longer required.
 
 ## [conductor-e2e 0.1.7] — 2026-10-01
 

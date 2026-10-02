@@ -13,31 +13,19 @@ With 18 tools across discovery, scaffolding, validation, and live JavaFX desktop
 
 ## Install
 
-`conductor-mcp` is published to **GitHub Packages** (not the public npm registry) as
-`@nouhouari/conductor-mcp` by the `release-mcp.yml` workflow, on every `mcp-v*` tag.
-Each release also attaches a `.tgz` tarball to the corresponding
-[GitHub Release](https://github.com/nouhouari/conductor/releases).
-
-Point the `@nouhouari` scope at GitHub Packages first — add to `.npmrc` (project or `~/.npmrc`):
-
-```ini
-@nouhouari:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-`GITHUB_TOKEN` must be a personal access token with the `read:packages` scope
-(GitHub Packages requires authentication even for public packages).
-
-Then:
+`conductor-mcp` is published to the public **npm registry** as `@nouhouari/conductor-mcp`
+by the `release-mcp.yml` workflow on every `mcp-v*` tag — no `.npmrc` or token needed:
 
 ```bash
 npm install @nouhouari/conductor-mcp
 ```
 
-Or install straight from a release tarball, with no registry configuration:
+Each release is also published to GitHub Packages and attaches a `.tgz` tarball to the
+corresponding [GitHub Release](https://github.com/nouhouari/conductor/releases), so you can
+install straight from a tarball:
 
 ```bash
-npm install https://github.com/nouhouari/conductor/releases/download/mcp-v0.2.0/nouhouari-conductor-mcp-0.2.0.tgz
+npm install https://github.com/nouhouari/conductor/releases/download/mcp-v0.2.3/nouhouari-conductor-mcp-0.2.3.tgz
 ```
 
 ### Prerequisites
@@ -106,9 +94,9 @@ Add to `.mcp.json` in your project root:
 
 Restart Claude Code. The **Conductor MCP** tools will be available to any AI in that workspace.
 
-> `npx` resolves `@nouhouari/conductor-mcp` from GitHub Packages, so the `.npmrc` scope
-> mapping above must be in place (or the package installed locally, in which case you can use
-> `"command": "node", "args": ["./node_modules/@nouhouari/conductor-mcp/dist/cli.js"]`).
+> `npx` resolves `@nouhouari/conductor-mcp` from the public npm registry. If the package is
+> installed locally you can instead use
+> `"command": "node", "args": ["./node_modules/@nouhouari/conductor-mcp/dist/cli.js"]`.
 
 ### Cursor
 
@@ -497,7 +485,7 @@ Example:
 
 **Notes:**
 - Does **not** run `npm install` (or `mvn`) — that's your step.
-- The generated `package.json` pins `@nouhouari/conductor-e2e`, which lives on **GitHub Packages** — the target project needs the `@nouhouari:registry` mapping from [Install](#install).
+- The generated `package.json` pins `@nouhouari/conductor-e2e`, which installs from the public npm registry.
 - With `language: 'java'` it writes `pom.xml` + JUnit Platform suites instead; run `mvn test-compile` to verify.
 - The `cucumber.js` profile and directory structure match the [User Guide](../docs/USER_GUIDE.md) — use this to bootstrap a fresh project in seconds.
 
@@ -648,6 +636,8 @@ Example:
 
 ## Resources
 
+- [@nouhouari/conductor-e2e on npm](https://www.npmjs.com/package/@nouhouari/conductor-e2e)
+- [@nouhouari/conductor-mcp on npm](https://www.npmjs.com/package/@nouhouari/conductor-mcp)
 - [@nouhouari/conductor-e2e on GitHub Packages](https://github.com/nouhouari/conductor/pkgs/npm/conductor-e2e)
 - [@nouhouari/conductor-mcp on GitHub Packages](https://github.com/nouhouari/conductor/pkgs/npm/conductor-mcp)
 - [Releases](https://github.com/nouhouari/conductor/releases) — downloadable `.tgz` tarballs
