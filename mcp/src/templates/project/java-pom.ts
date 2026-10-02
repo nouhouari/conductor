@@ -3,6 +3,16 @@
  * Versions mirror java/pom.xml and java/conductor-example/pom.xml.
  */
 
+/**
+ * Released com.nouhouari.conductor:conductor-core version that generated
+ * projects depend on. Bump this when a new java-v* tag is published; the
+ * README template reads the same constant so the two cannot drift.
+ */
+export const CONDUCTOR_JAVA_VERSION = '0.1.0';
+
+/** Maven repository id for GitHub Packages, shared by the pom and README templates. */
+export const CONDUCTOR_MAVEN_REPO_ID = 'github-conductor';
+
 export interface JavaPomOptions {
   readonly name: string;
   readonly groupId: string;
@@ -32,7 +42,7 @@ export function renderJavaPom(options: JavaPomOptions): string {
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>17</maven.compiler.release>
 
-    <conductor.version>0.1.0-SNAPSHOT</conductor.version>
+    <conductor.version>${CONDUCTOR_JAVA_VERSION}</conductor.version>
     <cucumber.version>7.18.1</cucumber.version>
     <junit.jupiter.version>5.10.3</junit.jupiter.version>
     <junit.platform.version>1.10.3</junit.platform.version>
@@ -42,6 +52,31 @@ export function renderJavaPom(options: JavaPomOptions): string {
     <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
   </properties>
+
+  <!--
+    conductor-core is published to GitHub Packages. Maven requires
+    authentication for GitHub Packages even on public repositories: add a
+    <server> with this id to your ~/.m2/settings.xml, using a personal access
+    token that has the read:packages scope.
+
+      <server>
+        <id>${CONDUCTOR_MAVEN_REPO_ID}</id>
+        <username>YOUR_GITHUB_USERNAME</username>
+        <password>YOUR_TOKEN_WITH_read:packages</password>
+      </server>
+
+    Alternatively, build the monorepo locally (cd java && mvn install) and drop
+    this <repositories> block.
+  -->
+  <repositories>
+    <repository>
+      <id>${CONDUCTOR_MAVEN_REPO_ID}</id>
+      <name>GitHub Packages — nouhouari/conductor</name>
+      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
+  </repositories>
 
   <dependencies>
     <dependency>

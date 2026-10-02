@@ -19,7 +19,7 @@ import { renderEnvExample } from '../../templates/project/env-example.js';
 import { renderGitignore } from '../../templates/project/gitignore.js';
 import { renderReadme } from '../../templates/project/readme.js';
 import { getSamplesForPlatforms } from '../../templates/project/samples.js';
-import { renderJavaPom } from '../../templates/project/java-pom.js';
+import { renderJavaPom, CONDUCTOR_JAVA_VERSION, CONDUCTOR_MAVEN_REPO_ID } from '../../templates/project/java-pom.js';
 import { renderJavaSuite, getJavaSuiteClassName, type JavaSuitePlatform } from '../../templates/project/java-suites.js';
 import { renderJavaConfigYml } from '../../templates/project/java-config.js';
 import { getJavaSamplesForPlatforms } from '../../templates/project/java-samples.js';
@@ -177,7 +177,9 @@ function buildNextSteps(projectPath: string, platforms: readonly Platform[]): st
 function buildJavaNextSteps(projectPath: string, platforms: readonly Platform[]): string[] {
   const steps = [
     `cd ${projectPath}`,
-    'mvn -q install -DskipTests   # requires com.nouhouari.conductor:conductor-core:0.1.0-SNAPSHOT installed locally first',
+    `# conductor-core ${CONDUCTOR_JAVA_VERSION} resolves from GitHub Packages, which requires auth:`,
+    `# add a <server> with id "${CONDUCTOR_MAVEN_REPO_ID}" and a read:packages token to ~/.m2/settings.xml (see README.md)`,
+    'mvn -q install -DskipTests',
   ];
 
   if (platforms.includes('web') || platforms.includes('cross-platform')) {

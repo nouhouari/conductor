@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- **CI coverage for the Java port** — `ci.yml` gained a `java` job (temurin JDK 21) that builds and unit-tests `conductor-core`, compiles `conductor-example`'s step definitions and page objects, and runs a Cucumber JVM `--dry-run` over `example/features` with the real glue so undefined/ambiguous steps fail the build. The example's suites need real browsers/devices and are never executed on a hosted runner.
+- **`release-java.yml`** — releases the Java port on `java-v*` tags: verifies the tag matches `java/pom.xml` (and refuses `-SNAPSHOT`), attaches the `conductor-core` jar to a GitHub Release, and deploys the parent POM plus `conductor-core` to GitHub Packages Maven. `conductor-example` sets `maven.deploy.skip=true`.
+- `java/pom.xml` gained `<distributionManagement>` pointing at `https://maven.pkg.github.com/nouhouari/conductor`, and `java/README.md` a "CI & Releasing" section.
+
 ## [conductor-e2e 0.1.7] — 2026-10-01
 
 ### Changed
@@ -26,6 +32,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - **Release workflow publishes to npmjs.org** — `release-mcp.yml` now publishes `@nouhouari/conductor-mcp` to the public npm registry (via the `NPM_TOKEN` repository secret) in addition to GitHub Packages, so `npx @nouhouari/conductor-mcp` works without a GitHub Packages `.npmrc`.
 
 - **Docs: GitHub Copilot CLI wire-up for `conductor-mcp`** — `mcp/README.md` and `docs/USER_GUIDE.md` now document the `~/.copilot/mcp-config.json` entry (including the Copilot-specific `"type": "stdio"` and `"tools"` allow-list) alongside the existing Claude Code / Cursor / Continue instructions. The user guide's setup snippet was also corrected to the published package name `@nouhouari/conductor-mcp` and now notes the GitHub Packages `.npmrc` requirement and Java target-project support.
+
+## [conductor-java 0.1.0] — 2026-07-30
+
+First release of the Java port. Published to GitHub Packages as `com.nouhouari.conductor:conductor-core`.
+
+### Added
+
+- **`conductor-core`** — Java/Cucumber-JVM/Playwright port of the framework, developed alongside the TypeScript implementation and driving the *same* Gherkin feature files under `example/features`.
+  - `ConductorWorld` with lazily-instantiated drivers, shared test data, and picocontainer-based injection into step definitions.
+  - Drivers: `WebDriver` (Playwright), `ApiDriver` (Playwright `APIRequestContext`), `MaestroDriver` (Maestro CLI), `JavaFxDriver` (fxagent HTTP API), `FlutterDesktopDriver` (Dart VM service), and the abstract `DatabaseDriver`.
+  - Tag-driven Cucumber-JVM hooks mirroring the TS `@web` / `@mobile` / `@flutter-desktop` / `@database` lifecycle, plus `BasePage`.
+  - YAML `ConfigLoader` with the TS precedence order (`config/default.yml` → `config/local-overrides.yml` → `config/${TEST_ENV}.yml` → environment variables) and the same env-var names.
+- **`conductor-example`** (not published) — ported step definitions and page objects, plus one JUnit 5 `@Suite` class per platform tag, the Java equivalent of `example/cucumber.js`'s named profiles.
+
+### Notes
+
+- Validated end-to-end against the real apps, no mocks: `ApiSuiteTest` 8/8, `WebSuiteTest` 9/9, `DesktopSuiteTest` 8/8, `FlutterDesktopSuiteTest` 5/5, `MobileSuiteTest` 8/8, `CrossPlatformSuiteTest` 10/10.
+- `JavaFxDriver` targets `fxagent.jar` v1.0.0 (package `com.hin.fxagent`); waits are polled client-side via `POST /api/v1/elements/query` because the agent's `/elements/wait` cannot express `hidden`/absent states.
+- The `RemoteScenarioFetcher` / `conductor-fetch-features` CLI equivalent is intentionally not ported.
 
 ## [conductor-mcp 0.2.0] — 2026-07-30
 

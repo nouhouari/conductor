@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.nouhouari.conductor</groupId>
     <artifactId>conductor-java-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>conductor-example</artifactId>
@@ -15,6 +15,11 @@
 
   <name>Conductor Example (Java)</name>
   <description>Java port of the example/ BDD consumer — step definitions and page objects, running against the SAME Gherkin feature files and Maestro flows as the TypeScript example (../../example/features, ../../example/flows).</description>
+
+  <properties>
+    <!-- Sample consumer project, not a published artifact. -->
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
 
   <dependencies>
     <dependency>

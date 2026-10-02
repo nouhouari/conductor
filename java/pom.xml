@@ -6,7 +6,7 @@
 
   <groupId>com.nouhouari.conductor</groupId>
   <artifactId>conductor-java-parent</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Conductor E2E (Java)</name>
@@ -16,6 +16,24 @@
     <module>conductor-core</module>
     <module>conductor-example</module>
   </modules>
+
+  <!--
+    Publishing target for .github/workflows/release-java.yml (tag java-v*).
+    The repository id `github` must match the server-id configured by
+    actions/setup-java, which supplies the credentials at deploy time.
+  -->
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages — nouhouari/conductor</name>
+      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
+    </repository>
+    <snapshotRepository>
+      <id>github</id>
+      <name>GitHub Packages — nouhouari/conductor</name>
+      <url>https://maven.pkg.github.com/nouhouari/conductor</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
