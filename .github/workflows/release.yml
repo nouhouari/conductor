@@ -61,7 +61,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Second registry: public npmjs.org. setup-node rewrites .npmrc so the
-      # NODE_AUTH_TOKEN below is scoped to registry.npmjs.org. The explicit
+      # @nouhouari scope and NODE_AUTH_TOKEN below point at registry.npmjs.org. The explicit
       # --registry flag overrides the publishConfig in package.json, which
       # points at GitHub Packages. NPM_TOKEN must be a repository secret holding
       # an npmjs.org automation/granular token with publish rights on the
@@ -71,6 +71,11 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+          # Must be explicit: the GitHub Packages setup-node step above wrote
+          # `@nouhouari:registry=https://npm.pkg.github.com/` (scope defaults to
+          # the repo owner), and a scoped registry beats `--registry`. Setting
+          # the scope here replaces that line so publishes really hit npmjs.org.
+          scope: '@nouhouari'
 
       - name: Publish to npmjs.org
         run: |

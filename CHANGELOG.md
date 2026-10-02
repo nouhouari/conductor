@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - **`release-java.yml` no longer fails after a successful Central publish** — bumped `central-publishing-maven-plugin` 0.7.0 → 0.11.0. 0.7.0 could not parse the `warnings` field the Central Portal now returns while polling deployment status, so the job failed even though `conductor-java 0.2.0` was published.
 
+## [conductor-e2e 0.1.8] — 2026-10-02
+
+### Fixed
+
+- **npmjs.org publish actually targets npmjs.org** — the second `setup-node` step in `release.yml` and `release-mcp.yml` now sets `scope: '@nouhouari'`. Without it, the `@nouhouari:registry=https://npm.pkg.github.com/` line written by the GitHub Packages step survived and overrode `--registry`, so the "Publish to npmjs.org" step re-published to GitHub Packages with the npm token and failed with E401. `conductor-e2e` 0.1.7 and `conductor-mcp` 0.2.1/0.2.2 therefore never reached npmjs.org; 0.1.8 and 0.2.3 are the first versions there.
+
 ## [conductor-java 0.2.0] — 2026-10-02
 
 ### Changed
@@ -26,6 +32,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [conductor-mcp 0.2.3] — 2026-10-02
 
 ### Changed
+
+- `init_project` pins `@nouhouari/conductor-e2e` `^0.1.8`, the first version published to npmjs.org.
+- `bin` path normalised to `dist/cli.js` (npm was auto-correcting `./dist/cli.js` on publish).
 
 - **Java projects resolve `conductor-core` from Maven Central** — `init_project` with `language: "java"` now generates a `pom.xml` depending on `io.github.nouhouari.conductor:conductor-core:0.2.0`, with no GitHub Packages `<repositories>` block or `~/.m2/settings.xml` token step.
 - **Docs: npm install** — `mcp/README.md` now installs `@nouhouari/conductor-mcp` from the public npm registry; the GitHub Packages `.npmrc` / `read:packages` setup is no longer required.

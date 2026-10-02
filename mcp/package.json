@@ -21,7 +21,7 @@
   },
   "main": "dist/cli.js",
   "bin": {
-    "conductor-mcp": "./dist/cli.js"
+    "conductor-mcp": "dist/cli.js"
   },
   "files": [
     "dist",
